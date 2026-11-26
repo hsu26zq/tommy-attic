@@ -31,16 +31,18 @@ import { baseExtensions, editableOptions, editorOptions } from "./editorSetup";
 import { isTrustedHere, supabase } from "@/lib/supabase";
 import { api, type Database, type NoteSummary } from "@/lib/api";
 import { notesChanged } from "@/lib/notesEvents";
+import BlockSelect from "./BlockSelect";
 import { useRouter } from "next/navigation";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-export type EditorHandle = { replaceContent: (blocks: unknown[]) => void; editor: any };
+export type EditorHandle = { replaceContent: (blocks: unknown[]) => void; editor: any }; // eslint-disable-line @typescript-eslint/no-explicit-any
 
 type Props = {
   noteId: string;
   initialContent: unknown[];
   initialYdoc: string | null;
-  onChange: (content: unknown[], markdown: string, ydoc: string) => void;
+  // Called on every edit with a way to read the page; the (slow) reading happens only when saving
+  onChange: (snapshot: () => { content: unknown[]; markdown: string; ydoc: string }) => void;
   onReady?: (h: EditorHandle) => void;
 };
 
@@ -290,9 +292,13 @@ function LiveEditor({ noteId, onChange, onReady, doc, provider }: Props & { doc:
           theme="light"
           slashMenu={false}
           sideMenu={false}
-          onChange={() => {
-            onChange(editor.document as unknown[], editor.blocksToMarkdownLossy(editor.document), toBase64(Y.encodeStateAsUpdate(doc)));
-          }}
+          onChange={() =>
+            onChange(() => ({
+              content: editor.document as unknown[],
+              markdown: editor.blocksToMarkdownLossy(editor.document),
+              ydoc: toBase64(Y.encodeStateAsUpdate(doc)),
+            }))
+          }
         >
           <SuggestionMenuController
             triggerCharacter="/"
@@ -312,6 +318,7 @@ function LiveEditor({ noteId, onChange, onReady, doc, provider }: Props & { doc:
             }}
           />
           <SuggestionMenuController triggerCharacter="@" getItems={noteLinkItems} />
+          <BlockSelect editor={editor} />
           <SideMenuController
             sideMenu={(props) => (
               <SideMenu

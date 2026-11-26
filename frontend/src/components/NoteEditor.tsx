@@ -3,6 +3,7 @@ import { useCallback, useEffect, useRef, useState, type ReactNode } from "react"
 import { api, type Note } from "@/lib/api";
 import { notesChanged } from "@/lib/notesEvents";
 import { rememberOpened } from "@/lib/recent";
+import { cachedNote, fetchNote, updateCached } from "@/lib/noteCache";
 import { useWorkspace } from "./workspace/Workspace";
 import Cover, { CoverPicker } from "./Cover";
 import { EditorClient } from "./ClientOnly";
@@ -42,17 +43,36 @@ export default function NoteEditor({
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const saving = useRef(false);
   const handle = useRef<EditorHandle | null>(null);
+  const snap = useRef<(() => { content: unknown[]; markdown: string; ydoc: string }) | null>(null);
 
   useEffect(() => {
-    setNote(null);
     rememberOpened(id);
-    api<Note>(`/notes/${id}`)
-      .then(setNote)
-      .catch((e) => setLoadError((e as Error).message));
+    setLoadError("");
+    // Seen before? Show it right away, then refresh the page's details quietly.
+    // (The text itself stays live through sync, so only the details are refreshed.)
+    const cached = cachedNote(id);
+    setNote(cached ?? null);
+    fetchNote(id)
+      .then((fresh) =>
+        setNote((cur) =>
+          cur && cur.id === id
+            ? { ...cur, title: fresh.title, icon: fresh.icon, cover: fresh.cover, wide: fresh.wide, is_public: fresh.is_public, slug: fresh.slug, properties: fresh.properties, path: fresh.path }
+            : fresh,
+        ),
+      )
+      .catch((e) => !cached && setLoadError((e as Error).message));
   }, [id]);
 
   const flush = useCallback(async () => {
     if (saving.current) return;
+    if (snap.current) {
+      try {
+        const s = snap.current();
+        pending.current = { ...pending.current, ...s };
+        updateCached(id, s as Partial<Note>);
+      } catch {}
+      snap.current = null;
+    }
     const changes = pending.current;
     if (!Object.keys(changes).length) return;
     pending.current = {};
@@ -77,18 +97,19 @@ export default function NoteEditor({
   const change = useCallback(
     (p: Pending) => {
       setNote((n) => (n ? { ...n, ...p } : n));
+      updateCached(id, p);
       pending.current = { ...pending.current, ...p };
       setSave("unsaved");
       if (timer.current) clearTimeout(timer.current);
       timer.current = setTimeout(flush, 800);
     },
-    [flush],
+    [flush, id],
   );
 
   // Save before leaving
   useEffect(() => {
     const warn = (e: BeforeUnloadEvent) => {
-      if (Object.keys(pending.current).length) e.preventDefault();
+      if (Object.keys(pending.current).length || snap.current) e.preventDefault();
     };
     window.addEventListener("beforeunload", warn);
     return () => {
@@ -98,7 +119,16 @@ export default function NoteEditor({
   }, [flush]);
 
   const onReady = useCallback((h: EditorHandle) => (handle.current = h), []);
-  const onEdit = useCallback((content: unknown[], markdown: string, ydoc: string) => change({ content, markdown, ydoc }), [change]);
+  // Typing only marks the page as changed; its content is read once, when it's saved
+  const onEdit = useCallback(
+    (snapshot: () => { content: unknown[]; markdown: string; ydoc: string }) => {
+      snap.current = snapshot;
+      setSave("unsaved");
+      if (timer.current) clearTimeout(timer.current);
+      timer.current = setTimeout(flush, 800);
+    },
+    [flush],
+  );
 
   if (loadError) return <p className="muted">{loadError}</p>;
   if (!note)
@@ -150,7 +180,17 @@ export default function NoteEditor({
           value={note.title === "Untitled" ? "" : note.title}
           placeholder="Untitled"
           onChange={(e) => change({ title: e.target.value || "Untitled" })}
-          onKeyDown={(e) => e.key === "Enter" && handle.current?.editor?.focus()}
+          onKeyDown={(e) => {
+            // Enter or ↓ jumps into the page's first line
+            if (e.key !== "Enter" && e.key !== "ArrowDown") return;
+            const ed = handle.current?.editor;
+            if (!ed) return;
+            e.preventDefault();
+            try {
+              ed.setTextCursorPosition(ed.document[0], "start");
+            } catch {}
+            ed.focus();
+          }}
         />
         {beforeEditor?.(ctx)}
         <EditorBoundary key={note.id}>

@@ -2,6 +2,7 @@
 import Link from "next/link";
 import { createReactInlineContentSpec } from "@blocknote/react";
 import { useWorkspace } from "./workspace/Workspace";
+import { prefetchNote } from "@/lib/noteCache";
 
 // Shows the linked page's current name and icon (the saved title is only a fallback).
 function LinkLabel({ noteId, title }: { noteId: string; title: string }) {
@@ -29,7 +30,7 @@ export const NoteLink = createReactInlineContentSpec(
   {
     render: ({ inlineContent, editor }) =>
       editor.isEditable ? (
-        <Link className="note-link" href={`/edit/${inlineContent.props.noteId}`} contentEditable={false}>
+        <Link className="note-link" href={`/edit/${inlineContent.props.noteId}`} contentEditable={false} onMouseEnter={() => prefetchNote(inlineContent.props.noteId)}>
           <LinkLabel noteId={inlineContent.props.noteId} title={inlineContent.props.title} />
         </Link>
       ) : (

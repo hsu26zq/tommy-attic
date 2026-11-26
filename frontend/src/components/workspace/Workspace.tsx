@@ -1,6 +1,7 @@
 "use client";
-import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
+import { isTrustedHere } from "@/lib/supabase";
 import { api, type NoteSummary } from "@/lib/api";
 import { useSession } from "@/lib/useSession";
 import { onNotesChanged } from "@/lib/notesEvents";
@@ -12,6 +13,7 @@ import { PanelIcon } from "./icons";
 type Ctx = { notes: NoteSummary[] | null; openSidebar: () => void; hidden: boolean; setHidden: (h: boolean) => void };
 const WorkspaceCtx = createContext<Ctx>({ notes: null, openSidebar: () => {}, hidden: false, setHidden: () => {} });
 const HIDDEN_KEY = "ta_side_hidden";
+const LIST_KEY = "ta_pages";
 export const useWorkspace = () => useContext(WorkspaceCtx);
 
 export default function Workspace({ children }: { children: ReactNode }) {
@@ -49,9 +51,21 @@ export default function Workspace({ children }: { children: ReactNode }) {
     if (ready && !session) router.replace("/login");
   }, [ready, session, router]);
 
+  // Show the last page list right away (kept on this device; only for this tab on untrusted ones), then refresh
+  useEffect(() => {
+    try {
+      const saved = (isTrustedHere() ? localStorage : sessionStorage).getItem(LIST_KEY);
+      if (saved) setNotes((cur) => cur ?? JSON.parse(saved));
+    } catch {}
+  }, []);
+
   const load = useCallback(async () => {
     try {
-      setNotes(await api<NoteSummary[]>("/notes"));
+      const list = await api<NoteSummary[]>("/notes");
+      setNotes(list);
+      try {
+        (isTrustedHere() ? localStorage : sessionStorage).setItem(LIST_KEY, JSON.stringify(list));
+      } catch {}
       setError("");
     } catch (e) {
       setError((e as { status?: number }).status === 403 ? "This account isn't the owner." : (e as Error).message);
@@ -65,10 +79,13 @@ export default function Workspace({ children }: { children: ReactNode }) {
     return onNotesChanged(load);
   }, [session, load]);
 
+  // one stable value, so pages and links only redraw when something they use changes
+  const ctxValue = useMemo(() => ({ notes, openSidebar: () => setSideOpen(true), hidden, setHidden }), [notes, hidden, setHidden]);
+
   if (!ready || !session) return null;
 
   return (
-    <WorkspaceCtx.Provider value={{ notes, openSidebar: () => setSideOpen(true), hidden, setHidden }}>
+    <WorkspaceCtx.Provider value={ctxValue}>
       <div className={`app ${hidden ? "side-hidden" : ""}`}>
         <div className="side-peek" aria-hidden />
         <Sidebar notes={notes} open={sideOpen} onClose={() => setSideOpen(false)} onHide={() => setHidden(true)} />

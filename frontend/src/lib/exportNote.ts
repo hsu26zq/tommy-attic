@@ -23,11 +23,22 @@ export async function copyText(text: string) {
 }
 
 // A small message at the bottom of the screen that fades away by itself.
-export function toast(message: string) {
+export function toast(message: string, action?: { label: string; run: () => void }) {
+  document.querySelectorAll(".toast").forEach((t) => t.remove());
   const el = document.createElement("div");
   el.className = "toast";
   el.textContent = message;
+  if (action) {
+    const b = document.createElement("button");
+    b.textContent = action.label;
+    b.onclick = () => {
+      el.remove();
+      action.run();
+    };
+    el.appendChild(b);
+  }
   document.body.appendChild(el);
-  setTimeout(() => el.classList.add("out"), 1600);
-  setTimeout(() => el.remove(), 2000);
+  const stay = action ? 5000 : 1600;
+  setTimeout(() => el.classList.add("out"), stay);
+  setTimeout(() => el.remove(), stay + 400);
 }

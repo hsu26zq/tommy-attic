@@ -561,3 +561,13 @@ td:hover .cell-input[type="date"] { color: inherit; }
 .bn-suggestion-menu-item .bn-mt-suggestion-menu-item-section[data-position="left"] { padding: 0 !important; width: 22px; height: 22px; background: transparent !important; color: var(--muted); margin-inline-end: 8px !important; }
 .bn-suggestion-menu-item .bn-mt-suggestion-menu-item-section[data-position="left"] svg { width: 16px; height: 16px; }
 .bn-suggestion-menu-item .bn-mt-suggestion-menu-item-title { font-size: 14px; line-height: 20px; }
+
+/* Bigger, easier-to-grab + and ⋮⋮ handles */
+.bn-side-menu .mantine-UnstyledButton-root:not(.mantine-Menu-item) { min-width: 24px; min-height: 24px; display: inline-flex; align-items: center; justify-content: center; border-radius: 5px; }
+.bn-side-menu .mantine-UnstyledButton-root:not(.mantine-Menu-item) svg { width: 20px; height: 20px; }
+
+/* Block selection (box drag / Esc) */
+.select-box { position: fixed; z-index: 90; pointer-events: none; background: color-mix(in srgb, var(--accent) 9%, transparent); border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent); border-radius: 3px; }
+.toast { display: flex; align-items: center; gap: 12px; }
+.toast button { border: 0; background: none; color: var(--bg); opacity: 0.75; font: inherit; font-weight: 600; cursor: pointer; padding: 0; }
+.toast button:hover { opacity: 1; }

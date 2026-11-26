@@ -6,6 +6,7 @@ import { api, type NoteSummary } from "@/lib/api";
 import { notesChanged, openSearch } from "@/lib/notesEvents";
 import { copyText, downloadMarkdown, toast } from "@/lib/exportNote";
 import MoveDialog from "./MoveDialog";
+import { cancelPrefetch, forgetNote, prefetchNote } from "@/lib/noteCache";
 import { PanelIcon } from "./icons";
 
 const EXPANDED_KEY = "ta_expanded";
@@ -102,13 +103,24 @@ export default function Sidebar({ notes, open, onClose, onHide }: { notes: NoteS
 
   const patch = async (id: string, body: Record<string, unknown>) => {
     await api(`/notes/${id}`, { method: "PATCH", body: JSON.stringify(body) });
+    forgetNote(id);
     notesChanged();
   };
 
   async function trash(id: string) {
     await api(`/notes/${id}`, { method: "DELETE" });
+    forgetNote(id);
     notesChanged();
-    if (path.startsWith(`/edit/${id}`)) router.replace("/edit");
+    const wasOpen = path.startsWith(`/edit/${id}`);
+    if (wasOpen) router.replace("/edit");
+    toast("Moved to trash", {
+      label: "Undo",
+      run: async () => {
+        await api(`/notes/${id}/restore`, { method: "POST" });
+        notesChanged();
+        if (wasOpen) router.push(`/edit/${id}`);
+      },
+    });
   }
 
   async function duplicate(id: string) {
@@ -220,7 +232,7 @@ export default function Sidebar({ notes, open, onClose, onHide }: { notes: NoteS
             }}
           />
         ) : (
-          <Link href={`/edit/${n.id}`} className="tree-link" draggable={false}>
+          <Link href={`/edit/${n.id}`} className="tree-link" draggable={false} onMouseEnter={() => prefetchNote(n.id)} onMouseLeave={cancelPrefetch}>
             <span className="tree-icon">{n.icon || <PageGlyph />}</span>
             <span className="tree-title">{n.title || "Untitled"}</span>
           </Link>

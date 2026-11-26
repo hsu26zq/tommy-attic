@@ -63,7 +63,10 @@ export function setTrustedHere(trusted: boolean) {
       if (k.startsWith("sb-")) moving.push([k, from.getItem(k)!]);
     }
     if (trusted) localStorage.setItem(TRUST_FLAG, "1");
-    else localStorage.removeItem(TRUST_FLAG);
+    else {
+      localStorage.removeItem(TRUST_FLAG);
+      localStorage.removeItem("ta_pages"); // the saved page list stays only on trusted devices
+    }
     const to = trusted ? localStorage : sessionStorage;
     for (const [k, v] of moving) {
       to.setItem(k, v);

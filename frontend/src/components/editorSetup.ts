@@ -36,7 +36,25 @@ export const editorOptions = {
   resolveFileUrl,
 };
 
-export const editableOptions = { ...editorOptions, uploadFile };
+// hoverMargin: the + ⋮⋮ handles show up when the mouse is anywhere on a block's line,
+// even far to the left or right of the text
+// Pasting a YouTube / Vimeo / Loom link on an empty line turns it into a playable video.
+const VIDEO = /^https?:\/\/(www\.|m\.)?(youtube\.com\/(watch\?|shorts\/)|youtu\.be\/|vimeo\.com\/\d|loom\.com\/share\/)\S*$/i;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function pasteHandler({ event, editor, defaultPasteHandler }: any) {
+  const text = event.clipboardData?.getData("text/plain")?.trim() ?? "";
+  if (VIDEO.test(text)) {
+    const block = editor.getTextCursorPosition().block;
+    const empty = block.type === "paragraph" && (!block.content || block.content.length === 0);
+    if (empty) {
+      editor.updateBlock(block, { type: "embed", props: { url: text } });
+      return true;
+    }
+  }
+  return defaultPasteHandler();
+}
+
+export const editableOptions = { ...editorOptions, uploadFile, pasteHandler, sideMenu: { hoverMargin: 2000 } };
 
 // Code highlighting (added as an editor extension)
 export const baseExtensions = [syntaxHighlighter];
