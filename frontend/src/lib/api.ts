@@ -15,6 +15,14 @@ export async function api<T = unknown>(path: string, init: RequestInit = {}): Pr
     },
   });
   if (res.status === 204) return undefined as T;
+  // The login was ended elsewhere (signed out everywhere, or it expired): go back to the login screen
+  // (at most once every 15 seconds, so a stubborn login can never bounce back and forth)
+  if (res.status === 401 && token && typeof window !== "undefined" && !location.pathname.startsWith("/login") && Date.now() - Number(sessionStorage.getItem("ta_401") ?? 0) > 15_000) {
+    sessionStorage.setItem("ta_401", String(Date.now()));
+    await supabase().auth.signOut({ scope: "local" }).catch(() => {});
+    location.replace(`/login?next=${encodeURIComponent(location.pathname)}`);
+    return new Promise<T>(() => {}); // the page is leaving
+  }
   const body = await res.json().catch(() => ({}));
   if (!res.ok) {
     const err = new Error(body.error ?? `Request failed (${res.status})`) as Error & { status: number; body: unknown };

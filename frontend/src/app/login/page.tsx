@@ -9,7 +9,7 @@ import QrLogin from "@/components/QrLogin";
 // Where to go after login (only paths on this site)
 function nextPath() {
   const n = new URLSearchParams(window.location.search).get("next") ?? "";
-  return n.startsWith("/") && !n.startsWith("//") ? n : "/edit";
+  return n.startsWith("/") && !n.startsWith("//") && !n.startsWith("/login") ? n : "/edit";
 }
 
 type PasskeyApi = {
@@ -24,16 +24,11 @@ export default function LoginPage() {
   const [busy, setBusy] = useState(false);
   const [idle, setIdle] = useState(false);
 
-  // Coming back from an email login link: the session is picked up from the URL automatically.
+  // Already logged in: go straight on
   useEffect(() => {
     setIdle(new URLSearchParams(window.location.search).has("idle"));
-    const sb = supabase();
-    const fromLink = window.location.hash.includes("access_token");
-    sb.auth.getSession().then(async ({ data }) => {
-      if (data.session) {
-        if (fromLink) void afterLogin("email-link");
-        router.replace(nextPath());
-      }
+    supabase().auth.getSession().then(({ data }) => {
+      if (data.session) router.replace(nextPath());
     });
   }, [router]);
 

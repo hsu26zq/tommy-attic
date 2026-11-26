@@ -49,7 +49,7 @@ export default function Workspace({ children }: { children: ReactNode }) {
   }, [hidden, setHidden]);
 
   useEffect(() => {
-    if (ready && !session) router.replace("/login");
+    if (ready && !session && !location.pathname.startsWith("/login")) router.replace(`/login?next=${encodeURIComponent(location.pathname)}`);
   }, [ready, session, router]);
 
   // Show the last page list right away (kept on this device; only for this tab on untrusted ones), then refresh
