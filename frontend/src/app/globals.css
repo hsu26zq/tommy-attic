@@ -156,3 +156,11 @@ input[type="text"], input[type="email"], select {
 .drawing-canvas.editable { cursor: crosshair; }
 .drawing-canvas.erasing { cursor: cell; }
 .article .drawing-canvas { border: none; background: transparent; }
+
+/* pdf block */
+.pdf-viewer { width: 100%; border: 1px solid var(--line); border-radius: 10px; overflow: hidden; background: #fff; }
+.pdf-tools { display: flex; align-items: center; gap: 8px; padding: 6px 10px; border-bottom: 1px solid var(--line); background: #fffdf9; }
+.pdf-tools button { border: 1px solid var(--line); background: #fff; border-radius: 8px; width: 28px; height: 26px; cursor: pointer; font: inherit; }
+.pdf-pages { overflow: auto; background: #ece6dc; padding: 12px; -webkit-overflow-scrolling: touch; }
+.pdf-page { margin: 0 auto 12px; background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,.15); }
+[data-content-type="pdf"], [data-content-type="pdf"] .bn-file-block-content-wrapper { width: 100%; }

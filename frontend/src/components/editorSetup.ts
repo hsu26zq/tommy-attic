@@ -4,10 +4,12 @@ import { en } from "@blocknote/core/locales";
 import { withMultiColumn, multiColumnDropCursor, locales as columnLocales } from "@blocknote/xl-multi-column";
 import { resolveFileUrl, uploadFile } from "@/lib/files";
 import { DrawingBlock } from "./DrawingBlock";
+import { PdfBlock } from "./PdfBlock";
 
 // Shared editor settings for both the editor (you) and the read-only viewer (visitors).
 export const schema = withMultiColumn(
-  BlockNoteSchema.create({ blockSpecs: { ...defaultBlockSpecs, drawing: DrawingBlock() } }),
+  // pdf goes last so dropped PDFs become PDF blocks instead of plain file attachments
+  BlockNoteSchema.create({ blockSpecs: { ...defaultBlockSpecs, drawing: DrawingBlock(), pdf: PdfBlock() } }),
 );
 
 export const editorOptions = {

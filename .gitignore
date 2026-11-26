@@ -10,3 +10,4 @@ dist/
 *.tsbuildinfo
 next-env.d.ts
 .vercel
+frontend/public/pdf.worker.min.mjs

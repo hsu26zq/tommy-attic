@@ -144,6 +144,15 @@ export default function Editor({ noteId, initialContent, onChange }: Props) {
                     // eslint-disable-next-line @typescript-eslint/no-explicit-any
                     onItemClick: () => insertOrUpdateBlockForSlashMenu(editor, { type: "drawing" } as any),
                   },
+                  {
+                    title: "PDF",
+                    subtext: "Read a PDF right inside the note",
+                    aliases: ["pdf", "document", "reader"],
+                    group: "Media",
+                    icon: <span style={{ fontSize: 18 }}>📄</span>,
+                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                    onItemClick: () => insertOrUpdateBlockForSlashMenu(editor, { type: "pdf" } as any),
+                  },
                 ] as ReturnType<typeof getDefaultReactSlashMenuItems>),
                 query,
               )
