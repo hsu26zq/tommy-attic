@@ -17,6 +17,8 @@ export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [busy, setBusy] = useState(false);
   const [idle, setIdle] = useState(false);
+  const [codeSent, setCodeSent] = useState(false);
+  const [code, setCode] = useState("");
 
   // Coming back from an email login link: the session is picked up from the URL automatically.
   useEffect(() => {
@@ -60,11 +62,29 @@ export default function LoginPage() {
     setBusy(true);
     const { error: err } = await supabase().auth.signInWithOtp({
       email,
-      options: { emailRedirectTo: `${window.location.origin}/login` },
+      options: { emailRedirectTo: `${window.location.origin}/login`, shouldCreateUser: false },
     });
     setBusy(false);
     if (err) setError(err.message);
-    else setStatus("Check your email for a login link.");
+    else {
+      setCodeSent(true);
+      setStatus("Email sent. Type the code from the email here (or open the link on this device).");
+    }
+  }
+
+  // The code from the email can be read on your phone and typed on this computer.
+  async function verifyCode(e: React.FormEvent) {
+    e.preventDefault();
+    setError("");
+    setBusy(true);
+    const { error: err } = await supabase().auth.verifyOtp({ email, token: code.trim(), type: "email" });
+    if (err) {
+      setBusy(false);
+      setError(err.message.includes("expired") || err.message.includes("invalid") ? "That code is wrong or expired." : err.message);
+      return;
+    }
+    await afterLogin("email-code");
+    router.replace("/edit");
   }
 
   return (
@@ -78,11 +98,27 @@ export default function LoginPage() {
         </button>
         <p className="muted small">On someone else&apos;s computer, choose your phone and scan the QR code.</p>
 
-        <div className="divider">or (first time / lost phone)</div>
+        <div className="divider">or log in by email</div>
         <form onSubmit={emailLogin} className="row">
           <input type="email" placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} required />
-          <button className="btn secondary" disabled={busy}>Email link</button>
+          <button className="btn secondary" disabled={busy}>{codeSent ? "Resend" : "Email me a code"}</button>
         </form>
+        {codeSent && (
+          <form onSubmit={verifyCode} className="row" style={{ marginTop: 10 }}>
+            <input
+              type="text"
+              inputMode="numeric"
+              autoComplete="one-time-code"
+              placeholder="Code from email"
+              value={code}
+              onChange={(e) => setCode(e.target.value.replace(/\D/g, ""))}
+              maxLength={10}
+              required
+              autoFocus
+            />
+            <button className="btn" disabled={busy || code.length < 6}>Log in</button>
+          </form>
+        )}
 
         {status && <div className="notice ok">{status}</div>}
         {error && <div className="notice">{error}</div>}
