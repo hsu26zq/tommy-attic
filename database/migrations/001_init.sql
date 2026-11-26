@@ -76,3 +76,16 @@ create policy "anyone reads files in public notes" on storage.objects for select
   using (bucket_id = 'files' and exists (
     select 1 from public.notes n where n.is_public and position(storage.objects.name in n.content::text) > 0
   ));
+
+-- Only the owner's email may ever have an account. Any other sign-up is rejected.
+create or replace function public.block_signups() returns trigger
+language plpgsql security definer set search_path = public as $$
+begin
+  if not exists (select 1 from public.settings where lower(owner_email) = lower(new.email)) then
+    raise exception 'Sign-ups are closed';
+  end if;
+  return new;
+end; $$;
+revoke execute on function public.block_signups() from public, anon, authenticated;
+create trigger block_signups before insert on auth.users
+for each row execute function public.block_signups();
