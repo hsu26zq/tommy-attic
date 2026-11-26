@@ -26,13 +26,13 @@ Supabase – notes, login (passkeys), trusted devices, files
 2. **Backend:** every write is checked against the owner account.
 3. **Database:** Row Level Security. Visitors can only read notes marked public.
 
-Trusted devices stay logged in. A device is trusted only by setting `approved = true` in the
-Supabase `devices` table. Other devices get a short session (logged out when the browser closes or
+Every browser registers itself after login. It's trusted only when you set `approved = true` in the
+Supabase `devices` table; trusted devices stay logged in. Other devices get a short session (logged out when the browser closes or
 after 30 minutes idle). Every login sends an alert email.
 
 ## Features
 
-Nested pages, search (⌘K), trash, version history, `@` links + backlinks, databases (table view),
+Nested pages (right-click a page for history / move / delete), search (⌘K), trash, version history, `@` links + backlinks, databases (table view),
 Notion import, live sync between devices, drawing (Apple Pencil), PDF reader, code highlighting.
 
 ## Run it locally

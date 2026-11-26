@@ -13,15 +13,10 @@ const devices = new Hono<{ Variables: AuthVars }>();
 devices.use("*", requireOwner);
 
 const COOKIE = "ta_device";
-const FIELDS = "id,name,approved,pair_code,user_agent,created_at,last_seen_at";
+const FIELDS = "id,name,approved,user_agent,created_at,last_seen_at";
 
 const hash = (token: string) => createHash("sha256").update(token).digest("hex");
 
-function pairCode(): string {
-  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
-  const pick = () => chars[randomBytes(1)[0] % chars.length];
-  return `${pick()}${pick()}${pick()}-${pick()}${pick()}${pick()}`;
-}
 
 async function currentDevice(c: Context, db: SupabaseClient) {
   const token = getCookie(c, COOKIE);
@@ -39,8 +34,8 @@ devices.get("/me", async (c) => {
   return c.json({ device });
 });
 
-// "Trust this device": creates a pending device with a pair code.
-// Approval happens only by hand in the Supabase dashboard (devices table → approved = true).
+// Registers this browser as a pending device (done automatically after login).
+// Approval happens only by hand in Supabase (devices table → approved = true).
 devices.post("/register", async (c) => {
   const existing = await currentDevice(c, c.var.db);
   if (existing) return c.json({ device: existing });
@@ -53,7 +48,6 @@ devices.post("/register", async (c) => {
     .insert({
       name: String(body.name ?? "Unnamed device").slice(0, 80),
       token_hash: hash(token),
-      pair_code: pairCode(),
       approved: false,
       user_agent: (c.req.header("User-Agent") ?? "").slice(0, 300),
     })
@@ -71,31 +65,9 @@ devices.post("/register", async (c) => {
   return c.json({ device: data }, 201);
 });
 
-devices.get("/", async (c) => {
-  const { data, error } = await c.var.db.from("devices").select(FIELDS).order("created_at");
-  if (error) throw new HTTPException(500, { message: error.message });
-  const me = await currentDevice(c, c.var.db);
-  return c.json({ devices: data, currentId: me?.id ?? null });
-});
 
 
-devices.patch("/:id", async (c) => {
-  const body = await c.req.json();
-  const { data, error } = await c.var.db
-    .from("devices")
-    .update({ name: String(body.name ?? "").slice(0, 80) || "Unnamed device" })
-    .eq("id", c.req.param("id"))
-    .select(FIELDS)
-    .single();
-  if (error) throw new HTTPException(500, { message: error.message });
-  return c.json({ device: data });
-});
 
-devices.delete("/:id", async (c) => {
-  const { error } = await c.var.db.from("devices").delete().eq("id", c.req.param("id"));
-  if (error) throw new HTTPException(500, { message: error.message });
-  return c.body(null, 204);
-});
 
 // Called right after every login. Every login sends an alert email.
 devices.post("/login-event", async (c) => {

@@ -4,7 +4,7 @@ import { api, type Note } from "@/lib/api";
 import { notesChanged } from "@/lib/notesEvents";
 import { EditorClient } from "./ClientOnly";
 import EditorBoundary from "./EditorBoundary";
-import type { EditorHandle, SyncStatus } from "./Editor";
+import type { EditorHandle } from "./Editor";
 
 type Pending = Partial<Pick<Note, "title" | "icon" | "is_public" | "content" | "markdown" | "properties" | "ydoc">>;
 export type SaveState = "saved" | "saving" | "unsaved" | "error";
@@ -12,8 +12,6 @@ export type SaveState = "saved" | "saving" | "unsaved" | "error";
 export type NoteCtx = {
   note: Note;
   change: (p: Pending) => void;
-  sync: SyncStatus;
-  save: SaveState;
   handle: React.MutableRefObject<EditorHandle | null>;
 };
 
@@ -33,7 +31,6 @@ export default function NoteEditor({
 }) {
   const [note, setNote] = useState<Note | null>(null);
   const [save, setSave] = useState<SaveState>("saved");
-  const [sync, setSync] = useState<SyncStatus>("connecting");
   const [loadError, setLoadError] = useState("");
   const [picker, setPicker] = useState(false);
   const pending = useRef<Pending>({});
@@ -100,11 +97,12 @@ export default function NoteEditor({
   if (loadError) return <p className="muted">{loadError}</p>;
   if (!note) return <p className="muted small">Loading…</p>;
 
-  const ctx: NoteCtx = { note, change, sync, save, handle };
+  const ctx: NoteCtx = { note, change, handle };
 
   return (
     <>
       {header?.(ctx)}
+      {save === "error" && <div className="save-error">Couldn&apos;t save. Retrying…</div>}
       <div className="page">
         <div className="page-icon-row">
           {note.icon ? (
@@ -130,7 +128,7 @@ export default function NoteEditor({
         />
         {beforeEditor?.(ctx)}
         <EditorBoundary key={note.id}>
-          <EditorClient noteId={note.id} initialContent={note.content} initialYdoc={note.ydoc} onChange={onEdit} onStatus={setSync} onReady={onReady} />
+          <EditorClient noteId={note.id} initialContent={note.content} initialYdoc={note.ydoc} onChange={onEdit} onReady={onReady} />
         </EditorBoundary>
         {after?.(ctx)}
       </div>
@@ -138,13 +136,3 @@ export default function NoteEditor({
   );
 }
 
-export function SyncDot({ sync, save }: { sync: SyncStatus; save: SaveState }) {
-  const text =
-    save === "error" ? "Not saved" : save === "saving" || save === "unsaved" ? "Saving…" : sync === "synced" ? "Saved" : "Saved · sync offline";
-  return (
-    <span className={`sync ${sync} ${save}`} title={sync === "synced" ? "Live sync on" : ""}>
-      <span className="dot" />
-      {text}
-    </span>
-  );
-}

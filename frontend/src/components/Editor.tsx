@@ -19,7 +19,6 @@ import { baseExtensions, editableOptions, editorOptions } from "./editorSetup";
 import { isTrustedHere, supabase } from "@/lib/supabase";
 import { api, type Database, type NoteSummary } from "@/lib/api";
 
-export type SyncStatus = "connecting" | "synced" | "offline";
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type EditorHandle = { replaceContent: (blocks: unknown[]) => void; editor: any };
 
@@ -28,7 +27,6 @@ type Props = {
   initialContent: unknown[];
   initialYdoc: string | null;
   onChange: (content: unknown[], markdown: string, ydoc: string) => void;
-  onStatus?: (s: SyncStatus) => void;
   onReady?: (h: EditorHandle) => void;
 };
 
@@ -111,7 +109,7 @@ export default function Editor(props: Props) {
   return <LiveEditor {...props} doc={doc} provider={provider} />;
 }
 
-function LiveEditor({ noteId, onChange, onStatus, onReady, doc, provider }: Props & { doc: Y.Doc; provider: HocuspocusProvider }) {
+function LiveEditor({ noteId, onChange, onReady, doc, provider }: Props & { doc: Y.Doc; provider: HocuspocusProvider }) {
 
   const editor = useCreateBlockNote({
     ...editableOptions,
@@ -133,22 +131,6 @@ function LiveEditor({ noteId, onChange, onStatus, onReady, doc, provider }: Prop
       editor,
     });
   }, [editor, onReady]);
-
-  // Live connection status (edits are saved either way)
-  useEffect(() => {
-    const onSynced = ({ state }: { state: boolean }) => state && onStatus?.("synced");
-    const onConn = ({ status }: { status: string }) => {
-      if (status === "disconnected") onStatus?.("offline");
-      else if (status === "connecting") onStatus?.("connecting");
-    };
-    provider.on("synced", onSynced);
-    provider.on("status", onConn);
-    if (provider.isSynced) onStatus?.("synced");
-    return () => {
-      provider.off("synced", onSynced);
-      provider.off("status", onConn);
-    };
-  }, [provider, onStatus]);
 
   const extraSlashItems: DefaultReactSuggestionItem[] = [
     {

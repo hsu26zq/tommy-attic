@@ -2,7 +2,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import QRCode from "qrcode";
 import { supabase } from "@/lib/supabase";
-import { afterLogin } from "@/lib/afterLogin";
+import { afterLogin } from "@/lib/devices";
 
 // Shows a QR code. Scan it with your logged-in iPhone, approve with Face ID, and this computer logs in.
 export default function QrLogin({ onDone }: { onDone: () => void }) {

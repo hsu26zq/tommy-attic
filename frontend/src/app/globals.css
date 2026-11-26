@@ -17,7 +17,7 @@
 }
 
 * { box-sizing: border-box; }
-html, body { margin: 0; padding: 0; }
+html, body { margin: 0; padding: 0; overflow-x: hidden; }
 body { background: var(--bg); color: var(--text); font: 15px/1.6 var(--font); -webkit-font-smoothing: antialiased; }
 a { color: inherit; }
 button { font: inherit; color: inherit; }
@@ -34,7 +34,7 @@ code { font-family: var(--mono); font-size: 0.9em; background: var(--hover); pad
 
 /* ---------- app shell ---------- */
 .app { display: flex; min-height: 100vh; }
-.main { flex: 1; min-width: 0; }
+.main { flex: 1; min-width: 0; overflow-x: hidden; }
 .banner { padding: 8px 16px; background: #fdecec; color: var(--danger); font-size: 13px; }
 
 .sidebar {
@@ -107,29 +107,14 @@ input:focus { border-color: #b8b7b3; }
 .row-between { display: flex; gap: 12px; align-items: center; justify-content: space-between; flex-wrap: wrap; }
 .row-between p { margin: 0; }
 
-.sync { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: var(--faint); padding: 0 6px; }
-.sync .dot { width: 6px; height: 6px; border-radius: 50%; background: #cfcdc8; }
-.sync.synced.saved .dot { background: var(--ok); }
-.sync.offline .dot, .sync.error .dot { background: var(--danger); }
 
-.pop-wrap { position: relative; }
-.pop {
-  position: absolute; right: 0; top: calc(100% + 6px); min-width: 280px; z-index: 50; padding: 10px; display: grid; gap: 10px;
-  background: #fff; border-radius: 8px; box-shadow: 0 0 0 1px rgba(15, 15, 15, 0.05), 0 4px 16px rgba(15, 15, 15, 0.12);
-}
-.pop.menu { min-width: 200px; padding: 4px; gap: 0; }
-.pop.menu button { text-align: left; border: 0; background: none; padding: 6px 10px; border-radius: 4px; cursor: pointer; font-size: 14px; }
-.pop.menu button:hover { background: var(--hover); }
-.switch-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; cursor: pointer; }
-.switch-row > span { display: grid; }
-.switch-row input { width: 18px; height: 18px; accent-color: var(--text); }
 
 /* ---------- page ---------- */
 .page { max-width: 760px; margin: 0 auto; padding: 48px 56px 160px; }
 .page-icon-row { position: relative; min-height: 28px; margin-bottom: 4px; }
 .page-icon { font-size: 56px; line-height: 1; border: 0; background: none; cursor: pointer; padding: 4px; border-radius: 8px; margin-left: -4px; }
 .page-icon:hover { background: var(--hover); }
-.add-icon { border: 0; background: none; color: var(--faint); font-size: 13px; padding: 3px 6px; border-radius: 4px; cursor: pointer; opacity: 0; transition: opacity 0.15s; }
+.add-icon { border: 0; background: none; color: var(--faint); font-size: 13px; padding: 3px 6px; margin-left: -6px; border-radius: 4px; cursor: pointer; opacity: 0; transition: opacity 0.15s; }
 .page:hover .add-icon { opacity: 1; }
 .add-icon:hover { background: var(--hover); color: var(--muted); }
 .icon-picker {
@@ -171,7 +156,6 @@ input:focus { border-color: #b8b7b3; }
 .list-main { flex: 1; min-width: 0; }
 .section { margin-bottom: 40px; }
 .section h2 { font-size: 13px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; margin: 0 0 10px; }
-.code { font: 600 22px var(--mono); letter-spacing: 0.15em; }
 
 /* ---------- overlays ---------- */
 .overlay { position: fixed; inset: 0; z-index: 100; background: rgba(15, 15, 15, 0.25); display: flex; justify-content: center; align-items: flex-start; padding-top: 12vh; }
@@ -341,3 +325,12 @@ tr:hover .db-open, tr:hover .db-del { opacity: 1; }
 .bn-editor:not(:focus) .ProseMirror-selectednode > .bn-block-content > :after { display: none !important; }
 .pdf-collapsed .pdf-tools { border-bottom: 0; }
 .editor-crash { padding: 16px; border: 1px solid var(--line); border-radius: 8px; color: var(--muted); font-size: 14px; display: flex; gap: 12px; align-items: center; justify-content: space-between; }
+
+.context-menu {
+  position: fixed; z-index: 120; min-width: 180px; padding: 4px; display: grid; background: #fff; border-radius: 8px;
+  box-shadow: 0 0 0 1px rgba(15, 15, 15, 0.05), 0 4px 16px rgba(15, 15, 15, 0.14);
+}
+.context-menu button { text-align: left; border: 0; background: none; padding: 6px 10px; border-radius: 4px; cursor: pointer; font-size: 14px; }
+.context-menu button:hover { background: var(--hover); }
+.tree-item { -webkit-touch-callout: none; user-select: none; }
+.save-error { position: fixed; bottom: 16px; left: 50%; transform: translateX(-50%); z-index: 60; background: #fff; color: var(--danger); font-size: 13px; padding: 6px 12px; border-radius: 6px; box-shadow: 0 2px 12px rgba(15, 15, 15, 0.12); }

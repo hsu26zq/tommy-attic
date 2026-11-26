@@ -1,10 +1,10 @@
 "use client";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { api, type NoteSummary } from "@/lib/api";
-import { supabase } from "@/lib/supabase";
 import { notesChanged, openSearch } from "@/lib/notesEvents";
+import MoveDialog from "./MoveDialog";
 
 const EXPANDED_KEY = "ta_expanded";
 
@@ -20,6 +20,20 @@ export default function Sidebar({ notes, open, onClose }: { notes: NoteSummary[]
   const router = useRouter();
   const path = usePathname();
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
+  const [menu, setMenu] = useState<{ id: string; x: number; y: number } | null>(null);
+  const [moving, setMoving] = useState<string | null>(null);
+  const press = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    if (!menu) return;
+    const close = () => setMenu(null);
+    window.addEventListener("click", close);
+    window.addEventListener("scroll", close, true);
+    return () => {
+      window.removeEventListener("click", close);
+      window.removeEventListener("scroll", close, true);
+    };
+  }, [menu]);
 
   useEffect(() => setExpanded(loadExpanded()), []);
   useEffect(() => onClose(), [path]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -66,6 +80,26 @@ export default function Sidebar({ notes, open, onClose }: { notes: NoteSummary[]
     router.push(`/edit/${note.id}`);
   }
 
+  async function trash(id: string) {
+    await api(`/notes/${id}`, { method: "DELETE" });
+    notesChanged();
+    if (path.startsWith(`/edit/${id}`)) router.replace("/edit");
+  }
+
+  // Right-click (or long-press on a phone) a page for its actions
+  const menuProps = (id: string) => ({
+    onContextMenu: (e: React.MouseEvent) => {
+      e.preventDefault();
+      setMenu({ id, x: e.clientX, y: e.clientY });
+    },
+    onTouchStart: (e: React.TouchEvent) => {
+      const t = e.touches[0];
+      press.current = setTimeout(() => setMenu({ id, x: t.clientX, y: t.clientY }), 500);
+    },
+    onTouchEnd: () => press.current && clearTimeout(press.current),
+    onTouchMove: () => press.current && clearTimeout(press.current),
+  });
+
   function Tree({ parent, depth }: { parent: string | null; depth: number }) {
     const items = children.get(parent) ?? [];
     return (
@@ -75,7 +109,7 @@ export default function Sidebar({ notes, open, onClose }: { notes: NoteSummary[]
           const isOpen = expanded.has(n.id);
           return (
             <div key={n.id}>
-              <div className={`tree-item ${path === `/edit/${n.id}` ? "active" : ""}`} style={{ paddingLeft: 6 + depth * 14 }}>
+              <div className={`tree-item ${path === `/edit/${n.id}` ? "active" : ""}`} style={{ paddingLeft: 6 + depth * 14 }} {...menuProps(n.id)}>
                 <button className={`chev ${kids ? "" : "empty"} ${isOpen ? "open" : ""}`} onClick={() => kids && toggle(n.id)} aria-label="Expand">
                   ›
                 </button>
@@ -118,12 +152,16 @@ export default function Sidebar({ notes, open, onClose }: { notes: NoteSummary[]
         <div className="side-bottom">
           <Link href="/edit/import" className={`side-link ${path === "/edit/import" ? "active" : ""}`}>Import</Link>
           <Link href="/edit/trash" className={`side-link ${path === "/edit/trash" ? "active" : ""}`}>Trash</Link>
-          <Link href="/edit/settings" className={`side-link ${path === "/edit/settings" ? "active" : ""}`}>Settings</Link>
-          <button className="side-link" onClick={() => supabase().auth.signOut({ scope: "local" }).then(() => router.replace("/login"))}>
-            Log out
-          </button>
         </div>
       </aside>
+      {menu && (
+        <div className="context-menu" style={{ left: Math.min(menu.x, window.innerWidth - 200), top: Math.min(menu.y, window.innerHeight - 140) }} onClick={(e) => e.stopPropagation()}>
+          <button onClick={() => { setMenu(null); router.push(`/edit/${menu.id}?history=1`); }}>Version history</button>
+          <button onClick={() => { setMenu(null); setMoving(menu.id); }}>Move to</button>
+          <button className="danger" onClick={() => { setMenu(null); trash(menu.id); }}>Delete</button>
+        </div>
+      )}
+      {moving && <MoveDialog noteId={moving} onClose={() => setMoving(null)} />}
     </>
   );
 }

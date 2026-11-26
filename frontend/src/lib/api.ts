@@ -56,7 +56,6 @@ export type Device = {
   id: string;
   name: string;
   approved: boolean;
-  pair_code: string | null;
   user_agent: string | null;
   created_at: string;
   last_seen_at: string;

@@ -1,7 +1,7 @@
 "use client";
 import Link from "next/link";
 import type { Column } from "@/lib/api";
-import NoteEditor, { SyncDot } from "../NoteEditor";
+import NoteEditor from "../NoteEditor";
 import { PropertyCell } from "./PropertyCell";
 
 // A database row opened on the side: properties on top, a full page below.
@@ -11,12 +11,10 @@ export default function RowPanel({ rowId, columns, onClose }: { rowId: string; c
       <aside className="panel">
         <NoteEditor
           id={rowId}
-          header={({ sync, save }) => (
+          header={() => (
             <div className="panel-bar">
               <button className="icon-btn" onClick={onClose} title="Close">✕</button>
               <Link href={`/edit/${rowId}`} className="ghost-link">Open as page</Link>
-              <span style={{ flex: 1 }} />
-              <SyncDot sync={sync} save={save} />
             </div>
           )}
           beforeEditor={({ note, change }) =>

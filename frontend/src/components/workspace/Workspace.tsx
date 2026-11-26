@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { api, type NoteSummary } from "@/lib/api";
 import { useSession } from "@/lib/useSession";
 import { onNotesChanged } from "@/lib/notesEvents";
+import { checkDevice } from "@/lib/devices";
 import Sidebar from "./Sidebar";
 import SearchDialog from "./SearchDialog";
 
@@ -33,6 +34,7 @@ export default function Workspace({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (!session) return;
+    checkDevice();
     load();
     return onNotesChanged(load);
   }, [session, load]);

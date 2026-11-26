@@ -39,20 +39,29 @@ function PdfPage({ pdf, n, width, zoom }: { pdf: PdfDoc; n: number; width: numbe
   useEffect(() => {
     if (!visible || !width) return;
     let cancelled = false;
-    pdf.getPage(n).then(async (page) => {
-      const base = page.getViewport({ scale: 1 });
-      setRatio(base.height / base.width);
-      const cssWidth = width * zoom;
-      const scale = (cssWidth / base.width) * Math.min(window.devicePixelRatio || 1, 2);
-      const viewport = page.getViewport({ scale });
-      const canvas = ref.current;
-      if (!canvas || cancelled) return;
-      canvas.width = Math.floor(viewport.width);
-      canvas.height = Math.floor(viewport.height);
-      await page.render({ canvasContext: canvas.getContext("2d")!, viewport, canvas }).promise.catch(() => {});
-    });
+    let task: { cancel?: () => void } | null = null;
+    pdf
+      .getPage(n)
+      .then(async (page) => {
+        if (cancelled) return;
+        const base = page.getViewport({ scale: 1 });
+        setRatio(base.height / base.width);
+        const scale = ((width * zoom) / base.width) * Math.min(window.devicePixelRatio || 1, 2);
+        const viewport = page.getViewport({ scale });
+        const canvas = ref.current;
+        if (!canvas || cancelled) return;
+        canvas.width = Math.floor(viewport.width);
+        canvas.height = Math.floor(viewport.height);
+        const t = page.render({ canvasContext: canvas.getContext("2d")!, viewport, canvas });
+        task = t as unknown as { cancel?: () => void };
+        await t.promise.catch(() => {});
+      })
+      .catch(() => {});
     return () => {
       cancelled = true;
+      try {
+        task?.cancel?.();
+      } catch {}
     };
   }, [pdf, n, width, zoom, visible]);
 
@@ -79,17 +88,30 @@ function PdfViewer({ url, height, collapsed, onToggle }: { url: string; height: 
     };
   }, [url]);
 
+  const wanted = !!src && !collapsed;
+  const [shown, setShown] = useState(false);
   useEffect(() => {
-    if (!src || collapsed) return;
+    if (wanted) setShown(true); // load the first time it's shown, then keep it loaded
+  }, [wanted]);
+
+  useEffect(() => {
+    if (!src || !shown) return;
     let doc: PdfDoc | null = null;
+    let alive = true;
     loadPdf(src)
       .then((d) => {
         doc = d;
-        setPdf(d);
+        if (alive) setPdf(d);
+        else d.destroy();
       })
-      .catch(() => setError("Couldn't open this PDF."));
-    return () => doc?.destroy();
-  }, [src, collapsed]);
+      .catch(() => alive && setError("Couldn't open this PDF."));
+    return () => {
+      alive = false;
+      try {
+        doc?.destroy();
+      } catch {}
+    };
+  }, [src, shown]);
 
   useEffect(() => {
     const el = box.current;
@@ -150,7 +172,15 @@ export const PdfBlock = createReactBlockSpec(
             url={props.block.props.url}
             height={props.block.props.height}
             collapsed={props.block.props.collapsed}
-            onToggle={props.editor.isEditable ? () => props.editor.updateBlock(props.block, { props: { collapsed: !props.block.props.collapsed } }) : undefined}
+            onToggle={
+              props.editor.isEditable
+                ? () => {
+                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                    const cur = props.editor.getBlock(props.block.id) as any;
+                    if (cur) props.editor.updateBlock(cur.id, { props: { collapsed: !cur.props.collapsed } });
+                  }
+                : undefined
+            }
           />
         ) : null}
       </FileBlockWrapper>

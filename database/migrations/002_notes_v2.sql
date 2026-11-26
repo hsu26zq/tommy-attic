@@ -101,3 +101,6 @@ begin
     'databases', coalesce((select jsonb_agg(to_jsonb(d)) from public.databases d), '[]'::jsonb)
   );
 end; $$;
+
+-- Devices register themselves after login; no pair codes.
+alter table public.devices drop column if exists pair_code;

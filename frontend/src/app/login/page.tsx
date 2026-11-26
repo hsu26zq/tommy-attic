@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import * as WebAuthn from "@simplewebauthn/browser";
 import { supabase } from "@/lib/supabase";
-import { afterLogin } from "@/lib/afterLogin";
+import { afterLogin } from "@/lib/devices";
 import QrLogin from "@/components/QrLogin";
 
 // Where to go after login (only paths on this site)
