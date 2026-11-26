@@ -1,11 +1,11 @@
 "use client";
 import Link from "next/link";
-import type { Column } from "@/lib/api";
+import type { Column, ColumnOption } from "@/lib/api";
 import NoteEditor from "../NoteEditor";
 import { PropertyCell } from "./PropertyCell";
 
 // A database row opened on the side: properties on top, a full page below.
-export default function RowPanel({ rowId, columns, onClose }: { rowId: string; columns: Column[]; onClose: () => void }) {
+export default function RowPanel({ rowId, columns, onClose, onAddOption }: { rowId: string; columns: Column[]; onClose: () => void; onAddOption?: (colId: string, o: ColumnOption) => void }) {
   return (
     <div className="panel-backdrop" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
       <aside className="panel">
@@ -28,6 +28,7 @@ export default function RowPanel({ rowId, columns, onClose }: { rowId: string; c
                       value={note.properties?.[c.id]}
                       editable
                       onSave={(v) => change({ properties: { ...note.properties, [c.id]: v } })}
+                      onAddOption={(o) => onAddOption?.(c.id, o)}
                     />
                   </div>
                 ))}

@@ -5,7 +5,7 @@ import { requireOwner, type AuthVars } from "../auth.js";
 const notes = new Hono<{ Variables: AuthVars }>();
 notes.use("*", requireOwner);
 
-const LIST_FIELDS = "id,title,icon,parent_id,position,is_public,slug,updated_at,published_at";
+const LIST_FIELDS = "id,title,icon,parent_id,position,pinned,wide,is_public,slug,updated_at,published_at";
 const VERSION_EVERY_MS = 10 * 60 * 1000; // keep a history snapshot at most every 10 minutes
 const MAX_VERSIONS = 50;
 
@@ -157,6 +157,9 @@ notes.patch("/:id", async (c) => {
     update.parent_id = body.parent_id || null;
   }
   if (typeof body.position === "number") update.position = body.position;
+  if (typeof body.cover === "string" || body.cover === null) update.cover = body.cover ? body.cover.slice(0, 500) : null;
+  if (typeof body.wide === "boolean") update.wide = body.wide;
+  if (typeof body.pinned === "boolean") update.pinned = body.pinned;
   if (typeof body.is_public === "boolean") {
     update.is_public = body.is_public;
     if (body.is_public && !current.slug) update.slug = slugify((update.title as string) ?? current.title);
@@ -192,6 +195,27 @@ notes.patch("/:id", async (c) => {
     }
   }
   return c.json(data);
+});
+
+// Duplicate a page (its own content; sub-pages stay with the original)
+notes.post("/:id/duplicate", async (c) => {
+  const { data: src, error } = await c.var.db
+    .from("notes")
+    .select("title,icon,cover,wide,parent_id,position,content,markdown,ydoc")
+    .eq("id", c.req.param("id"))
+    .maybeSingle();
+  fail(error);
+  if (!src) throw new HTTPException(404, { message: "Note not found" });
+  let next = c.var.db.from("notes").select("position").gt("position", src.position).is("database_id", null).order("position").limit(1);
+  next = src.parent_id ? next.eq("parent_id", src.parent_id) : next.is("parent_id", null);
+  const { data: after } = await next.maybeSingle();
+  const { data, error: insError } = await c.var.db
+    .from("notes")
+    .insert({ ...src, title: `${src.title} copy`.slice(0, 300), position: after ? (src.position + after.position) / 2 : src.position + 1 })
+    .select(LIST_FIELDS)
+    .single();
+  fail(insError);
+  return c.json(data, 201);
 });
 
 // Move to trash (with everything under it). ?forever=1 deletes permanently.

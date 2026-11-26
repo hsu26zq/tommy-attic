@@ -20,17 +20,38 @@ function Backlinks({ id }: { id: string }) {
       <div className="backlinks-title">Linked from</div>
       {links.map((l) => (
         <Link key={l.id} href={`/edit/${l.id}`} className="backlink">
-          {l.icon || "📄"} {l.title || "Untitled"}
+          {l.icon ? `${l.icon} ` : ""}{l.title || "Untitled"}
         </Link>
       ))}
     </div>
   );
 }
 
+// "Export as PDF": opens the print dialog once the page has drawn, then tidies the address
+function PrintOnLoad({ id }: { id: string }) {
+  const router = useRouter();
+  useEffect(() => {
+    let tries = 0;
+    const t = setInterval(() => {
+      if (document.querySelector(".bn-editor") || ++tries > 40) {
+        clearInterval(t);
+        setTimeout(() => {
+          window.print();
+          router.replace(`/edit/${id}`);
+        }, 600);
+      }
+    }, 250);
+    return () => clearInterval(t);
+  }, [id, router]);
+  return null;
+}
+
 export default function NotePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const router = useRouter();
-  const showHistory = useSearchParams().get("history") === "1";
+  const params2 = useSearchParams();
+  const showHistory = params2.get("history") === "1";
+  const print = params2.get("print") === "1";
   const closeHistory = () => router.replace(`/edit/${id}`);
 
   return (
@@ -65,7 +86,12 @@ export default function NotePage({ params }: { params: Promise<{ id: string }> }
           )}
         </>
       )}
-      after={() => <Backlinks id={id} />}
+      after={() => (
+        <>
+          <Backlinks id={id} />
+          {print && <PrintOnLoad id={id} />}
+        </>
+      )}
     />
   );
 }

@@ -3,6 +3,8 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { api } from "@/lib/api";
 import { onOpenSearch } from "@/lib/notesEvents";
+import { recentIds } from "@/lib/recent";
+import { useWorkspace } from "./Workspace";
 
 type Hit = { id: string; title: string; icon: string | null; snippet: string; isRow: boolean };
 
@@ -14,6 +16,7 @@ export default function SearchDialog() {
   const [hits, setHits] = useState<Hit[]>([]);
   const [sel, setSel] = useState(0);
   const input = useRef<HTMLInputElement>(null);
+  const { notes } = useWorkspace();
 
   useEffect(() => {
     const key = (e: KeyboardEvent) => {
@@ -34,6 +37,7 @@ export default function SearchDialog() {
     if (open) {
       setQ("");
       setHits([]);
+      setSel(0);
       setTimeout(() => input.current?.focus(), 0);
     }
   }, [open]);
@@ -54,6 +58,13 @@ export default function SearchDialog() {
     router.push(`/edit/${h.id}`);
   }
 
+  // Before typing: the pages you opened lately
+  const recent: Hit[] = !q.trim() && notes
+    ? recentIds().map((id) => notes.find((n) => n.id === id)).filter((n): n is NonNullable<typeof n> => !!n)
+        .map((n) => ({ id: n.id, title: n.title, icon: n.icon, snippet: "", isRow: false }))
+    : [];
+  const list = q.trim() ? hits : recent;
+
   if (!open) return null;
   return (
     <div className="overlay" onMouseDown={(e) => e.target === e.currentTarget && setOpen(false)}>
@@ -64,15 +75,16 @@ export default function SearchDialog() {
           placeholder="Search notes…"
           onChange={(e) => setQ(e.target.value)}
           onKeyDown={(e) => {
-            if (e.key === "ArrowDown") { e.preventDefault(); setSel((s) => Math.min(s + 1, hits.length - 1)); }
+            if (e.key === "ArrowDown") { e.preventDefault(); setSel((s) => Math.min(s + 1, list.length - 1)); }
             if (e.key === "ArrowUp") { e.preventDefault(); setSel((s) => Math.max(s - 1, 0)); }
-            if (e.key === "Enter" && hits[sel]) go(hits[sel]);
+            if (e.key === "Enter" && list[sel]) go(list[sel]);
           }}
         />
-        {q.trim() && (
+        {(q.trim() || recent.length > 0) && (
           <ul className="search-hits">
-            {hits.length === 0 && <li className="muted small search-empty">No results</li>}
-            {hits.map((h, i) => (
+            {!q.trim() && <li className="search-label">Recent</li>}
+            {q.trim() && hits.length === 0 && <li className="muted small search-empty">No results</li>}
+            {list.map((h, i) => (
               <li key={h.id} className={i === sel ? "sel" : ""} onMouseEnter={() => setSel(i)} onMouseDown={() => go(h)}>
                 <span className="hit-icon">{h.icon || "📄"}</span>
                 <span className="hit-text">

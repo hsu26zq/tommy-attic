@@ -3,6 +3,7 @@ import "@blocknote/core/fonts/inter.css";
 import "@blocknote/mantine/style.css";
 import { BlockNoteView } from "@blocknote/mantine";
 import { useCreateBlockNote } from "@blocknote/react";
+import { useDark } from "@/lib/useDark";
 import { baseExtensions, editorOptions } from "./editorSetup";
 
 // Read-only view of a note (public pages and version previews).
@@ -13,5 +14,6 @@ export default function Viewer({ content }: { content: unknown[] }) {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     initialContent: content.length ? (content as any) : undefined,
   });
-  return <BlockNoteView editor={editor} editable={false} theme="light" />;
+  const dark = useDark();
+  return <BlockNoteView editor={editor} editable={false} theme={dark ? "dark" : "light"} />;
 }

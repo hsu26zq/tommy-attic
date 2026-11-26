@@ -8,12 +8,25 @@ import { HocuspocusProvider } from "@hocuspocus/provider";
 import { BlockNoteEditor, combineByGroup, filterSuggestionItems, insertOrUpdateBlockForSlashMenu } from "@blocknote/core";
 import { CollaborationExtension, blocksToYXmlFragment } from "@blocknote/core/yjs";
 import { BlockNoteView } from "@blocknote/mantine";
+import { useDark } from "@/lib/useDark";
 import {
+  BlockColorsItem,
+  DragHandleMenu,
+  RemoveBlockItem,
+  SideMenu,
+  SideMenuController,
   SuggestionMenuController,
+  TableColumnHeaderItem,
+  TableRowHeaderItem,
   getDefaultReactSlashMenuItems,
+  useBlockNoteEditor,
+  useComponentsContext,
   useCreateBlockNote,
+  useExtensionState,
   type DefaultReactSuggestionItem,
 } from "@blocknote/react";
+import { SideMenuExtension } from "@blocknote/core/extensions";
+import { copyText, toast } from "@/lib/exportNote";
 import { getMultiColumnSlashMenuItems } from "@blocknote/xl-multi-column";
 import { baseExtensions, editableOptions, editorOptions } from "./editorSetup";
 import { isTrustedHere, supabase } from "@/lib/supabase";
@@ -103,6 +116,26 @@ function useSyncedDoc(noteId: string, initialYdoc: string | null, initialContent
   return { doc: setup.doc, provider: loaded ? setup.provider : null };
 }
 
+// "Copy link" in the ⋮⋮ menu: a link that opens this page scrolled to the block
+function CopyBlockLinkItem() {
+  const C = useComponentsContext()!;
+  const editor = useBlockNoteEditor();
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const block = useExtensionState(SideMenuExtension as any, { editor, selector: (s: any) => s?.block }) as { id: string } | undefined;
+  if (!block) return null;
+  return (
+    <C.Generic.Menu.Item
+      className="bn-menu-item"
+      onClick={async () => {
+        const ok = await copyText(`${location.origin}${location.pathname}#${block.id}`);
+        toast(ok ? "Link copied" : "Couldn't copy");
+      }}
+    >
+      Copy link
+    </C.Generic.Menu.Item>
+  );
+}
+
 export default function Editor(props: Props) {
   const { doc, provider } = useSyncedDoc(props.noteId, props.initialYdoc, props.initialContent);
   if (!provider) return null;
@@ -111,6 +144,7 @@ export default function Editor(props: Props) {
 
 function LiveEditor({ noteId, onChange, onReady, doc, provider }: Props & { doc: Y.Doc; provider: HocuspocusProvider }) {
 
+  const dark = useDark();
   const editor = useCreateBlockNote({
     ...editableOptions,
     extensions: [
@@ -132,6 +166,20 @@ function LiveEditor({ noteId, onChange, onReady, doc, provider }: Props & { doc:
     });
   }, [editor, onReady]);
 
+  // Opened from a block link (#block-id): scroll to that block and mark it briefly
+  useEffect(() => {
+    const id = decodeURIComponent(location.hash.slice(1));
+    if (!id) return;
+    const t = setTimeout(() => {
+      const el = document.querySelector(`.bn-block-outer[data-id="${CSS.escape(id)}"]`);
+      if (!el) return;
+      el.scrollIntoView({ block: "center" });
+      el.classList.add("flash");
+      setTimeout(() => el.classList.remove("flash"), 1800);
+    }, 400);
+    return () => clearTimeout(t);
+  }, []);
+
   // Let clicks on a code block's language picker reach the picker instead of the editor
   useEffect(() => {
     const keep = (e: Event) => {
@@ -146,6 +194,24 @@ function LiveEditor({ noteId, onChange, onReady, doc, provider }: Props & { doc:
   }, []);
 
   const extraSlashItems: DefaultReactSuggestionItem[] = [
+    {
+      title: "Callout",
+      subtext: "A tinted note with an emoji",
+      aliases: ["callout", "note", "tip", "warning", "info", "box"],
+      group: "Basic blocks",
+      icon: <span className="slash-icon">💡</span>,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      onItemClick: () => insertOrUpdateBlockForSlashMenu(editor, { type: "callout" } as any),
+    },
+    {
+      title: "Embed",
+      subtext: "YouTube, Vimeo, Loom, or a link preview",
+      aliases: ["embed", "youtube", "video", "link", "bookmark", "url", "vimeo", "loom"],
+      group: "Media",
+      icon: <span className="slash-icon">⧉</span>,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      onItemClick: () => insertOrUpdateBlockForSlashMenu(editor, { type: "embed" } as any),
+    },
     {
       title: "Database",
       subtext: "A table where every row is its own page",
@@ -202,22 +268,47 @@ function LiveEditor({ noteId, onChange, onReady, doc, provider }: Props & { doc:
       <div>
         <BlockNoteView
           editor={editor}
-          theme="light"
+          theme={dark ? "dark" : "light"}
           slashMenu={false}
+          sideMenu={false}
           onChange={() => {
             onChange(editor.document as unknown[], editor.blocksToMarkdownLossy(editor.document), toBase64(Y.encodeStateAsUpdate(doc)));
           }}
         >
           <SuggestionMenuController
             triggerCharacter="/"
-            getItems={async (query) =>
-              filterSuggestionItems(
+            getItems={async (query) => {
+              const found = filterSuggestionItems(
                 combineByGroup(getDefaultReactSlashMenuItems(editor), getMultiColumnSlashMenuItems(editor), extraSlashItems),
                 query,
-              )
-            }
+              );
+              // Within each group, names that start with what you typed come first ("/emb" → Embed before File)
+              const q = query.toLowerCase();
+              const groups = [...new Set(found.map((i) => i.group))];
+              const rank = (i: DefaultReactSuggestionItem) => (q && i.title.toLowerCase().startsWith(q) ? 0 : 1);
+              return found
+                .map((item, n) => ({ item, n }))
+                .sort((x, y) => groups.indexOf(x.item.group) - groups.indexOf(y.item.group) || rank(x.item) - rank(y.item) || x.n - y.n)
+                .map((x) => x.item);
+            }}
           />
           <SuggestionMenuController triggerCharacter="@" getItems={noteLinkItems} />
+          <SideMenuController
+            sideMenu={(props) => (
+              <SideMenu
+                {...props}
+                dragHandleMenu={(p) => (
+                  <DragHandleMenu {...p}>
+                    <RemoveBlockItem>Delete</RemoveBlockItem>
+                    <BlockColorsItem>Colors</BlockColorsItem>
+                    <CopyBlockLinkItem />
+                    <TableRowHeaderItem>Header row</TableRowHeaderItem>
+                    <TableColumnHeaderItem>Header column</TableColumnHeaderItem>
+                  </DragHandleMenu>
+                )}
+              />
+            )}
+          />
         </BlockNoteView>
       </div>
     </>

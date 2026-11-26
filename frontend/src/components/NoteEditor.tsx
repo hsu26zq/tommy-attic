@@ -2,11 +2,14 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { api, type Note } from "@/lib/api";
 import { notesChanged } from "@/lib/notesEvents";
+import { rememberOpened } from "@/lib/recent";
+import { useWorkspace } from "./workspace/Workspace";
+import Cover, { CoverPicker } from "./Cover";
 import { EditorClient } from "./ClientOnly";
 import EditorBoundary from "./EditorBoundary";
 import type { EditorHandle } from "./Editor";
 
-type Pending = Partial<Pick<Note, "title" | "icon" | "is_public" | "content" | "markdown" | "properties" | "ydoc">>;
+type Pending = Partial<Pick<Note, "title" | "icon" | "cover" | "is_public" | "content" | "markdown" | "properties" | "ydoc">>;
 export type SaveState = "saved" | "saving" | "unsaved" | "error";
 
 export type NoteCtx = {
@@ -33,6 +36,8 @@ export default function NoteEditor({
   const [save, setSave] = useState<SaveState>("saved");
   const [loadError, setLoadError] = useState("");
   const [picker, setPicker] = useState(false);
+  const [coverPicker, setCoverPicker] = useState(false);
+  const { notes } = useWorkspace();
   const pending = useRef<Pending>({});
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const saving = useRef(false);
@@ -40,6 +45,7 @@ export default function NoteEditor({
 
   useEffect(() => {
     setNote(null);
+    rememberOpened(id);
     api<Note>(`/notes/${id}`)
       .then(setNote)
       .catch((e) => setLoadError((e as Error).message));
@@ -106,17 +112,29 @@ export default function NoteEditor({
     );
 
   const ctx: NoteCtx = { note, change, handle };
+  // "Wide page" is switched from the sidebar menu, so read it from the page list
+  const wide = notes?.find((n) => n.id === note.id)?.wide ?? note.wide;
 
   return (
     <>
       {header?.(ctx)}
       {save === "error" && <div className="save-error">Couldn&apos;t save. Retrying…</div>}
-      <div className="page">
+      {note.cover && <Cover cover={note.cover} onChange={(cover) => change({ cover })} />}
+      <div className={`page ${wide ? "wide" : ""} ${note.cover ? "has-cover" : ""}`}>
         <div className="page-icon-row">
-          {note.icon ? (
-            <button className="page-icon" onClick={() => setPicker(!picker)}>{note.icon}</button>
-          ) : (
-            <button className="add-icon" onClick={() => setPicker(!picker)}>Add icon</button>
+          {note.icon && <button className="page-icon" onClick={() => setPicker(!picker)}>{note.icon}</button>}
+          <div className="page-adds">
+            {!note.icon && <button className="add-icon" onClick={() => setPicker(!picker)}>Add icon</button>}
+            {!note.cover && <button className="add-icon" onClick={() => setCoverPicker(!coverPicker)}>Add cover</button>}
+          </div>
+          {coverPicker && (
+            <CoverPicker
+              onPick={(cover) => {
+                setCoverPicker(false);
+                change({ cover });
+              }}
+              onClose={() => setCoverPicker(false)}
+            />
           )}
           {picker && (
             <div className="icon-picker" onMouseLeave={() => setPicker(false)}>

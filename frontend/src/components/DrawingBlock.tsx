@@ -59,13 +59,17 @@ function Strokes({ strokes, height }: { strokes: Stroke[]; height: number }) {
 function DrawingCanvas({
   strokesJson,
   height,
+  width,
   editable,
   onSave,
+  onWidth,
 }: {
   strokesJson: string;
   height: number;
+  width: number;
   editable: boolean;
   onSave: (strokes: string, height: number) => void;
+  onWidth: (width: number) => void;
 }) {
   const saved = useMemo(() => parse(strokesJson), [strokesJson]);
   const [strokes, setStrokes] = useState<Stroke[]>(saved);
@@ -149,6 +153,29 @@ function DrawingCanvas({
 
   const display = current ? [...strokes, current] : strokes;
 
+  // Drag the right edge to make the drawing narrower or wider (the drawing scales with it)
+  const [w, setW] = useState(width);
+  useEffect(() => setW(width), [width]);
+  const box = useRef<HTMLDivElement>(null);
+  const sizing = useRef<{ x: number; w: number; full: number } | null>(null);
+  function widthDown(e: React.PointerEvent) {
+    e.preventDefault();
+    e.stopPropagation();
+    (e.target as Element).setPointerCapture(e.pointerId);
+    const full = box.current?.parentElement?.getBoundingClientRect().width ?? 1;
+    sizing.current = { x: e.clientX, w, full };
+  }
+  function widthMove(e: React.PointerEvent) {
+    const s = sizing.current;
+    if (!s) return;
+    setW(Math.round(Math.min(100, Math.max(25, s.w + ((e.clientX - s.x) / s.full) * 100))));
+  }
+  function widthUp() {
+    if (!sizing.current) return;
+    sizing.current = null;
+    onWidth(w);
+  }
+
   // Drag the bottom edge to make the drawing taller or shorter (never cuts off strokes)
   const resizing = useRef<{ y: number; h: number } | null>(null);
   const lowest = useMemo(() => strokes.reduce((m, s) => s.p.reduce((mm, pt) => Math.max(mm, pt[1] + s.s), m), 0), [strokes]);
@@ -172,7 +199,7 @@ function DrawingCanvas({
   }
 
   return (
-    <div className="drawing" contentEditable={false} onMouseDown={(e) => editable && e.stopPropagation()}>
+    <div ref={box} className="drawing" style={{ width: `${w}%` }} contentEditable={false} onMouseDown={(e) => editable && e.stopPropagation()}>
       {editable && (
         <div className="drawing-tools">
           {COLORS.map((c) => (
@@ -215,6 +242,16 @@ function DrawingCanvas({
       </svg>
       {editable && (
         <div
+          className="drawing-resize-x"
+          title="Drag to resize"
+          onPointerDown={widthDown}
+          onPointerMove={widthMove}
+          onPointerUp={widthUp}
+          onPointerCancel={widthUp}
+        />
+      )}
+      {editable && (
+        <div
           className="drawing-resize"
           title="Drag to resize"
           onPointerDown={resizeDown}
@@ -233,6 +270,7 @@ export const DrawingBlock = createReactBlockSpec(
     propSchema: {
       strokes: { default: "[]" },
       height: { default: 450 },
+      width: { default: 100 },
     },
     content: "none",
   },
@@ -241,12 +279,14 @@ export const DrawingBlock = createReactBlockSpec(
       <DrawingCanvas
         strokesJson={block.props.strokes}
         height={block.props.height}
+        width={block.props.width}
         editable={editor.isEditable}
-        onSave={(strokes, height) => editor.updateBlock(block, { props: { strokes, height } })}
+        onSave={(strokes, height) => editor.updateBlock(block.id, { props: { strokes, height } })}
+        onWidth={(width) => editor.updateBlock(block.id, { props: { width } })}
       />
     ),
     toExternalHTML: ({ block }) => (
-      <svg viewBox={`0 0 ${W} ${block.props.height}`} width="100%">
+      <svg viewBox={`0 0 ${W} ${block.props.height}`} width={`${block.props.width}%`}>
         <Strokes strokes={parse(block.props.strokes)} height={block.props.height} />
       </svg>
     ),

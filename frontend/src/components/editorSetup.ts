@@ -5,6 +5,8 @@ import { codeBlockOptions, syntaxHighlighter } from "@blocknote/code-block";
 import { withMultiColumn, multiColumnDropCursor, locales as columnLocales } from "@blocknote/xl-multi-column";
 import { resolveFileUrl, uploadFile } from "@/lib/files";
 import { DrawingBlock } from "./DrawingBlock";
+import { CalloutBlock } from "./CalloutBlock";
+import { EmbedBlock } from "./EmbedBlock";
 import { PdfBlock } from "./PdfBlock";
 import { DatabaseBlock } from "./database/DatabaseBlock";
 import { NoteLink } from "./NoteLink";
@@ -16,6 +18,8 @@ export const schema = withMultiColumn(
     blockSpecs: {
       ...defaultBlockSpecs,
       codeBlock: createCodeBlockSpec(codeBlockOptions),
+      callout: CalloutBlock(),
+      embed: EmbedBlock(),
       drawing: DrawingBlock(),
       database: DatabaseBlock(),
       pdf: PdfBlock(),

@@ -4,9 +4,11 @@ import { randomBytes } from "node:crypto";
 import { requireOwner, type AuthVars } from "../auth.js";
 
 // Databases: a table inside a note. Each row is a note (title + properties + its own page).
-// Column types: text, number, select (tags), url, checkbox, date.
-const TYPES = new Set(["text", "number", "tags", "url", "checkbox", "date"]);
-type Column = { id: string; name: string; type: string };
+// Column types: text, number, tags (many), select (one), status, url, checkbox, date.
+const TYPES = new Set(["text", "number", "tags", "select", "status", "url", "checkbox", "date"]);
+type Option = { name: string; color: string };
+type Column = { id: string; name: string; type: string; width?: number; options?: Option[] };
+const COLORS = new Set(["gray", "brown", "orange", "yellow", "green", "blue", "purple", "pink", "red"]);
 
 const databases = new Hono<{ Variables: AuthVars }>();
 databases.use("*", requireOwner);
@@ -15,11 +17,35 @@ const colId = () => randomBytes(4).toString("hex");
 
 function cleanColumns(input: unknown): Column[] {
   if (!Array.isArray(input)) throw new HTTPException(400, { message: "columns must be a list" });
-  return input.slice(0, 30).map((c) => ({
-    id: typeof c?.id === "string" && c.id ? c.id.slice(0, 20) : colId(),
-    name: String(c?.name ?? "Column").slice(0, 60) || "Column",
-    type: TYPES.has(c?.type) ? c.type : "text",
-  }));
+  return input.slice(0, 30).map((c) => {
+    const col: Column = {
+      id: typeof c?.id === "string" && c.id ? c.id.slice(0, 20) : colId(),
+      name: String(c?.name ?? "Column").slice(0, 60) || "Column",
+      type: TYPES.has(c?.type) ? c.type : "text",
+    };
+    if (typeof c?.width === "number") col.width = Math.round(Math.min(800, Math.max(80, c.width)));
+    if (Array.isArray(c?.options)) {
+      col.options = c.options.slice(0, 50).map((o: Partial<Option>) => ({
+        name: String(o?.name ?? "").slice(0, 60),
+        color: COLORS.has(String(o?.color)) ? String(o?.color) : "gray",
+      })).filter((o: Option) => o.name);
+    }
+    return col;
+  });
+}
+
+// View settings: layout, which column groups the board / places the calendar, filters
+function cleanView(v: unknown) {
+  const o = (v && typeof v === "object" ? v : {}) as Record<string, unknown>;
+  const str = (x: unknown) => (typeof x === "string" ? x.slice(0, 40) : undefined);
+  return {
+    layout: ["table", "board", "calendar"].includes(String(o.layout)) ? o.layout : "table",
+    groupBy: str(o.groupBy),
+    dateBy: str(o.dateBy),
+    filters: Array.isArray(o.filters)
+      ? o.filters.slice(0, 10).map((f) => ({ col: str(f?.col) ?? "", value: String(f?.value ?? "").slice(0, 100) }))
+      : [],
+  };
 }
 
 databases.post("/", async (c) => {
@@ -49,9 +75,12 @@ databases.get("/:id", async (c) => {
 
 databases.patch("/:id", async (c) => {
   const body = await c.req.json();
+  const update: Record<string, unknown> = {};
+  if ("columns" in body) update.columns = cleanColumns(body.columns);
+  if ("view" in body) update.view = cleanView(body.view);
   const { data, error } = await c.var.db
     .from("databases")
-    .update({ columns: cleanColumns(body.columns) })
+    .update(update)
     .eq("id", c.req.param("id"))
     .select("*")
     .single();

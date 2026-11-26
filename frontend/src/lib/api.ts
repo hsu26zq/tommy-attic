@@ -31,6 +31,8 @@ export type NoteSummary = {
   icon: string | null;
   parent_id: string | null;
   position: number;
+  pinned: boolean;
+  wide: boolean;
   is_public: boolean;
   slug: string | null;
   updated_at: string;
@@ -38,6 +40,7 @@ export type NoteSummary = {
 };
 
 export type Note = NoteSummary & {
+  cover: string | null;
   content: unknown[];
   markdown: string;
   created_at: string;
@@ -47,9 +50,12 @@ export type Note = NoteSummary & {
   path: { id: string; title: string; icon: string | null }[];
 };
 
-export type ColumnType = "text" | "number" | "tags" | "url" | "checkbox" | "date";
-export type Column = { id: string; name: string; type: ColumnType };
-export type Database = { id: string; note_id: string; columns: Column[] };
+export type ColumnType = "text" | "number" | "tags" | "select" | "status" | "url" | "checkbox" | "date";
+export type OptionColor = "gray" | "brown" | "orange" | "yellow" | "green" | "blue" | "purple" | "pink" | "red";
+export type ColumnOption = { name: string; color: OptionColor };
+export type Column = { id: string; name: string; type: ColumnType; width?: number; options?: ColumnOption[] };
+export type DbView = { layout?: "table" | "board" | "calendar"; groupBy?: string; dateBy?: string; filters?: { col: string; value: string }[] };
+export type Database = { id: string; note_id: string; columns: Column[]; view: DbView };
 export type Row = { id: string; title: string; icon: string | null; properties: Record<string, unknown>; position: number };
 
 export type Device = {
