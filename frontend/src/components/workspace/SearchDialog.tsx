@@ -5,6 +5,7 @@ import { api } from "@/lib/api";
 import { onOpenSearch } from "@/lib/notesEvents";
 import { recentIds } from "@/lib/recent";
 import { useWorkspace } from "./Workspace";
+import { PageGlyph } from "./icons";
 
 type Hit = { id: string; title: string; icon: string | null; snippet: string; isRow: boolean };
 
@@ -86,7 +87,7 @@ export default function SearchDialog() {
             {q.trim() && hits.length === 0 && <li className="muted small search-empty">No results</li>}
             {list.map((h, i) => (
               <li key={h.id} className={i === sel ? "sel" : ""} onMouseEnter={() => setSel(i)} onMouseDown={() => go(h)}>
-                <span className="hit-icon">{h.icon || "📄"}</span>
+                <span className="hit-icon">{h.icon || <PageGlyph />}</span>
                 <span className="hit-text">
                   <span className="hit-title">{h.title || "Untitled"}</span>
                   {h.snippet && <span className="hit-snippet">{h.snippet}</span>}

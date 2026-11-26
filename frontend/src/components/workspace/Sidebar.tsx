@@ -7,7 +7,7 @@ import { notesChanged, openSearch } from "@/lib/notesEvents";
 import { copyText, downloadMarkdown, toast } from "@/lib/exportNote";
 import MoveDialog from "./MoveDialog";
 import { cancelPrefetch, forgetNote, prefetchNote } from "@/lib/noteCache";
-import { PanelIcon } from "./icons";
+import { PageGlyph, PanelIcon } from "./icons";
 
 const EXPANDED_KEY = "ta_expanded";
 type Zone = "before" | "inside" | "after";
@@ -331,15 +331,5 @@ export default function Sidebar({ notes, open, onClose, onHide }: { notes: NoteS
       )}
       {moving && <MoveDialog noteId={moving} onClose={() => setMoving(null)} />}
     </>
-  );
-}
-
-// A quiet page mark instead of an emoji, for pages without an icon
-function PageGlyph() {
-  return (
-    <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.2" aria-hidden>
-      <path d="M3.5 1.75h4.75L11 4.5v7.25a.5.5 0 0 1-.5.5h-7a.5.5 0 0 1-.5-.5v-9.5a.5.5 0 0 1 .5-.5Z" />
-      <path d="M8 2v2.75h2.75" />
-    </svg>
   );
 }

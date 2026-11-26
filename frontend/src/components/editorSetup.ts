@@ -7,6 +7,7 @@ import { resolveFileUrl, uploadFile } from "@/lib/files";
 import { DrawingBlock } from "./DrawingBlock";
 import { CalloutBlock } from "./CalloutBlock";
 import { EmbedBlock } from "./EmbedBlock";
+import { ContentsBlock } from "./ContentsBlock";
 import { PdfBlock } from "./PdfBlock";
 import { DatabaseBlock } from "./database/DatabaseBlock";
 import { NoteLink } from "./NoteLink";
@@ -20,6 +21,7 @@ export const schema = withMultiColumn(
       codeBlock: createCodeBlockSpec(codeBlockOptions),
       callout: CalloutBlock(),
       embed: EmbedBlock(),
+      contents: ContentsBlock(),
       drawing: DrawingBlock(),
       database: DatabaseBlock(),
       pdf: PdfBlock(),

@@ -225,6 +225,15 @@ function LiveEditor({ noteId, onChange, onReady, doc, provider }: Props & { doc:
       onItemClick: () => insertOrUpdateBlockForSlashMenu(editor, { type: "callout" } as any),
     },
     {
+      title: "Contents",
+      subtext: "A list of this page's headings",
+      aliases: ["contents", "toc", "table of contents", "outline"],
+      group: "Basic blocks",
+      icon: <span className="slash-icon">☰</span>,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      onItemClick: () => insertOrUpdateBlockForSlashMenu(editor, { type: "contents" } as any),
+    },
+    {
       title: "Embed",
       subtext: "YouTube, Vimeo, Loom, or a link preview",
       aliases: ["embed", "youtube", "video", "link", "bookmark", "url", "vimeo", "loom"],

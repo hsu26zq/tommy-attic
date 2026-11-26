@@ -373,6 +373,10 @@ tr:hover .db-open, tr:hover .db-del { opacity: 1; }
 .ProseMirror-selectednode > [data-content-type="database"] > :after,
 [data-content-type="drawing"].ProseMirror-selectednode > :after,
 .ProseMirror-selectednode > [data-content-type="drawing"] > :after,
+[data-content-type="contents"].ProseMirror-selectednode > :after,
+.ProseMirror-selectednode > [data-content-type="contents"] > :after,
+[data-content-type="embed"].ProseMirror-selectednode > :after,
+.ProseMirror-selectednode > [data-content-type="embed"] > :after,
 .bn-editor:not(:focus) .ProseMirror-selectednode > :after,
 .bn-editor:not(:focus) .ProseMirror-selectednode > .bn-block-content > :after { display: none !important; }
 .pdf-collapsed .pdf-tools { border-bottom: 0; }
@@ -577,3 +581,11 @@ td:hover .cell-input[type="date"] { color: inherit; }
 .db-bar, .db-new, .lane-new, .cal-head, .backlinks h2, .callout-side, .embed, .toast, .context-menu, .popover { user-select: none; -webkit-user-select: none; }
 /* Handles sit a little away from the text, with a small gap between + and ⋮⋮ */
 .bn-mantine .bn-side-menu { padding-right: 8px; gap: 2px; display: flex; align-items: center; }
+.hit-icon svg, .list-main svg { color: var(--faint); vertical-align: -2px; margin-right: 2px; }
+
+/* Contents block */
+.bn-block-content[data-content-type="contents"] { width: 100%; }
+.contents { width: 100%; display: grid; gap: 1px; padding: 4px 0; }
+.contents a { color: var(--muted); text-decoration: none; font-size: 14px; line-height: 1.5; padding: 3px 8px; justify-self: start; border-radius: 4px; text-decoration-line: underline; text-decoration-color: var(--line); text-underline-offset: 3px; }
+.contents a:hover { background: var(--hover); color: var(--text); }
+.contents.empty { color: var(--faint); font-size: 14px; padding: 6px 8px; }

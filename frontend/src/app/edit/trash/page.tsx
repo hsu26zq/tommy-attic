@@ -1,4 +1,5 @@
 "use client";
+import { PageGlyph } from "@/components/workspace/icons";
 import { useCallback, useEffect, useState } from "react";
 import { api } from "@/lib/api";
 import { notesChanged } from "@/lib/notesEvents";
@@ -40,7 +41,7 @@ export default function Trash() {
         <ul className="list">
           {items?.map((i) => (
             <li key={i.id}>
-              <span className="list-main">{i.icon || "📄"} {i.title || "Untitled"}</span>
+              <span className="list-main">{i.icon ? `${i.icon} ` : <PageGlyph />} {i.title || "Untitled"}</span>
               <span className="muted small">{new Date(i.deleted_at).toLocaleDateString()}</span>
               <button className="text-btn" onClick={() => restore(i.id)}>Restore</button>
               <button className="text-btn danger" onClick={() => destroy(i.id)}>Delete</button>
