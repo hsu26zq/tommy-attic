@@ -1,12 +1,12 @@
 "use client";
 import "@blocknote/core/fonts/inter.css";
 import "@blocknote/mantine/style.css";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import * as Y from "yjs";
 import { IndexeddbPersistence } from "y-indexeddb";
 import { HocuspocusProvider } from "@hocuspocus/provider";
-import { combineByGroup, filterSuggestionItems, insertOrUpdateBlockForSlashMenu } from "@blocknote/core";
-import { CollaborationExtension } from "@blocknote/core/yjs";
+import { BlockNoteEditor, combineByGroup, filterSuggestionItems, insertOrUpdateBlockForSlashMenu } from "@blocknote/core";
+import { CollaborationExtension, blocksToYXmlFragment } from "@blocknote/core/yjs";
 import { BlockNoteView } from "@blocknote/mantine";
 import {
   SuggestionMenuController,
@@ -15,7 +15,7 @@ import {
   type DefaultReactSuggestionItem,
 } from "@blocknote/react";
 import { getMultiColumnSlashMenuItems } from "@blocknote/xl-multi-column";
-import { baseExtensions, editableOptions } from "./editorSetup";
+import { baseExtensions, editableOptions, editorOptions } from "./editorSetup";
 import { isTrustedHere, supabase } from "@/lib/supabase";
 import { api, type Database, type NoteSummary } from "@/lib/api";
 
@@ -26,7 +26,8 @@ export type EditorHandle = { replaceContent: (blocks: unknown[]) => void; editor
 type Props = {
   noteId: string;
   initialContent: unknown[];
-  onChange: (content: unknown[], markdown: string) => void;
+  initialYdoc: string | null;
+  onChange: (content: unknown[], markdown: string, ydoc: string) => void;
   onStatus?: (s: SyncStatus) => void;
   onReady?: (h: EditorHandle) => void;
 };
@@ -39,35 +40,78 @@ function deviceLabel() {
   return /iPhone/.test(ua) ? "iPhone" : /iPad/.test(ua) ? "iPad" : /Mac/.test(ua) ? "Mac" : /Android/.test(ua) ? "Android" : "Computer";
 }
 
+const toBase64 = (bytes: Uint8Array) => {
+  let s = "";
+  for (let i = 0; i < bytes.length; i += 0x8000) s += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
+  return btoa(s);
+};
+const fromBase64 = (b64: string) => Uint8Array.from(atob(b64), (c) => c.charCodeAt(0));
+
 // One shared document per note: your devices edit the same copy live and changes merge.
-// Trusted devices also keep an offline copy, so you can keep writing without internet.
-function useSyncedDoc(noteId: string) {
-  const [setup] = useState(() => {
-    const doc = new Y.Doc();
-    const local = isTrustedHere() ? new IndexeddbPersistence(`ta-note-${noteId}`, doc) : null;
-    const provider = new HocuspocusProvider({
-      url: COLLAB_URL,
-      name: noteId,
-      document: doc,
-      token: async () => (await supabase().auth.getSession()).data.session?.access_token ?? "",
-    });
-    return { doc, provider, local };
-  });
-  useEffect(
-    () => () => {
-      setup.provider.destroy();
-      setup.local?.destroy();
-      setup.doc.destroy();
-    },
-    [setup],
-  );
-  return setup;
+// The note opens from the saved copy (and this device's offline copy) before the editor appears,
+// so nothing has to change under your cursor; the live connection joins in the background.
+let converter: BlockNoteEditor | null = null;
+function seed(doc: Y.Doc, blocks: unknown[]) {
+  const fragment = doc.getXmlFragment("document-store");
+  if (fragment.length > 0 || !blocks.length) return;
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    converter ??= BlockNoteEditor.create({ schema: editorOptions.schema }) as any;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    blocksToYXmlFragment(converter as any, blocks as any, fragment);
+  } catch (e) {
+    console.error("[editor] couldn't load saved blocks", e);
+  }
 }
 
-export default function Editor({ noteId, initialContent, onChange, onStatus, onReady }: Props) {
-  const { doc, provider, local } = useSyncedDoc(noteId);
-  const [ready, setReady] = useState(false);
-  const seeded = useRef(false);
+function useSyncedDoc(noteId: string, initialYdoc: string | null, initialContent: unknown[]) {
+  const [loaded, setLoaded] = useState(false);
+  const [setup] = useState(() => {
+    const doc = new Y.Doc();
+    if (initialYdoc) {
+      try {
+        Y.applyUpdate(doc, fromBase64(initialYdoc));
+      } catch {}
+    }
+    const local = isTrustedHere() ? new IndexeddbPersistence(`ta-note-${noteId}`, doc) : null;
+    return { doc, local, provider: null as HocuspocusProvider | null };
+  });
+
+  useEffect(() => {
+    let done = false;
+    const finish = () => {
+      if (done) return;
+      done = true;
+      seed(setup.doc, initialContent);
+      setup.provider = new HocuspocusProvider({
+        url: COLLAB_URL,
+        name: noteId,
+        document: setup.doc,
+        token: async () => (await supabase().auth.getSession()).data.session?.access_token ?? "",
+      });
+      setLoaded(true);
+    };
+    if (setup.local) {
+      setup.local.whenSynced.then(finish);
+      setTimeout(finish, 1500); // never wait long for the offline copy
+    } else finish();
+    return () => {
+      // Disconnect only; the editor may still be reading the document while it unmounts.
+      setup.provider?.destroy();
+      setup.local?.destroy();
+    };
+  }, [setup, noteId, initialContent]);
+
+  return { doc: setup.doc, provider: loaded ? setup.provider : null };
+}
+
+export default function Editor(props: Props) {
+  const { doc, provider } = useSyncedDoc(props.noteId, props.initialYdoc, props.initialContent);
+  if (!provider) return null;
+  return <LiveEditor {...props} doc={doc} provider={provider} />;
+}
+
+function LiveEditor({ noteId, onChange, onStatus, onReady, doc, provider }: Props & { doc: Y.Doc; provider: HocuspocusProvider }) {
 
   const editor = useCreateBlockNote({
     ...editableOptions,
@@ -90,41 +134,21 @@ export default function Editor({ noteId, initialContent, onChange, onStatus, onR
     });
   }, [editor, onReady]);
 
+  // Live connection status (edits are saved either way)
   useEffect(() => {
-    // First open with sync: fill the shared document from the saved copy.
-    const seed = () => {
-      if (seeded.current) return;
-      seeded.current = true;
-      if (doc.getXmlFragment("document-store").length === 0 && initialContent.length) {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        editor.replaceBlocks(editor.document, initialContent as any);
-      }
-      setReady(true);
-    };
-    const onSynced = ({ state }: { state: boolean }) => {
-      if (state) {
-        onStatus?.("synced");
-        seed();
-      }
-    };
+    const onSynced = ({ state }: { state: boolean }) => state && onStatus?.("synced");
     const onConn = ({ status }: { status: string }) => {
       if (status === "disconnected") onStatus?.("offline");
       else if (status === "connecting") onStatus?.("connecting");
     };
     provider.on("synced", onSynced);
     provider.on("status", onConn);
-    if (provider.isSynced) onSynced({ state: true });
-    local?.whenSynced.then(() => {
-      if (doc.getXmlFragment("document-store").length > 0) {
-        seeded.current = true;
-        setReady(true);
-      }
-    });
+    if (provider.isSynced) onStatus?.("synced");
     return () => {
       provider.off("synced", onSynced);
       provider.off("status", onConn);
     };
-  }, [provider, local, doc, editor, initialContent, onStatus]);
+  }, [provider, onStatus]);
 
   const extraSlashItems: DefaultReactSuggestionItem[] = [
     {
@@ -180,15 +204,13 @@ export default function Editor({ noteId, initialContent, onChange, onStatus, onR
 
   return (
     <>
-      {!ready && <p className="muted small">Connecting… (up to a minute if the server was asleep)</p>}
-      <div style={{ display: ready ? "block" : "none" }}>
+      <div>
         <BlockNoteView
           editor={editor}
-          editable={ready}
           theme="light"
           slashMenu={false}
           onChange={() => {
-            if (ready) onChange(editor.document as unknown[], editor.blocksToMarkdownLossy(editor.document));
+            onChange(editor.document as unknown[], editor.blocksToMarkdownLossy(editor.document), toBase64(Y.encodeStateAsUpdate(doc)));
           }}
         >
           <SuggestionMenuController

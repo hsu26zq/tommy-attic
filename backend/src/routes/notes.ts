@@ -143,6 +143,8 @@ notes.patch("/:id", async (c) => {
   if (typeof body.icon === "string" || body.icon === null) update.icon = body.icon;
   if (Array.isArray(body.content)) update.content = body.content;
   if (typeof body.markdown === "string") update.markdown = body.markdown;
+  // Sync state, saved with every edit so a note always opens instantly from the database
+  if (typeof body.ydoc === "string" && body.ydoc.length < 20_000_000) update.ydoc = body.ydoc;
   if (body.properties && typeof body.properties === "object") update.properties = body.properties;
   if ("parent_id" in body) {
     if (body.parent_id === id) throw new HTTPException(400, { message: "A page can't be inside itself" });

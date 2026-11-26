@@ -14,6 +14,10 @@ export const collabConfig = {
   maxDebounce: 10000,
   quiet: true,
 
+  async onConnect({ documentName }: { documentName: string }) {
+    console.log("[sync] connection for", documentName);
+  },
+
   // Same owner check as the API: a valid login AND the owner account.
   async onAuthenticate({ token, documentName }: { token: string; documentName: string }) {
     if (!token) throw new Error("Not logged in");
@@ -24,6 +28,7 @@ export const collabConfig = {
     if (!settings || settings.owner_id !== user.user.id) throw new Error("Not the owner");
     const { data: note } = await db.from("notes").select("id").eq("id", documentName).maybeSingle();
     if (!note) throw new Error("Note not found");
+    console.log("[sync] authenticated", documentName);
     return { db } satisfies Ctx;
   },
 

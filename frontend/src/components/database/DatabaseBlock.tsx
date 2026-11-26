@@ -103,7 +103,7 @@ function DatabaseView({ databaseId, editable }: { databaseId: string; editable: 
   const arrow = (col: string) => (sort?.col === col ? (sort.dir === 1 ? " ↑" : " ↓") : "");
 
   return (
-    <div className="db" contentEditable={false} onKeyDown={(e) => e.stopPropagation()}>
+    <div className="db" contentEditable={false} onKeyDown={(e) => e.stopPropagation()} onMouseDown={(e) => e.stopPropagation()}>
       <div className="db-scroll">
         <table className="db-table">
           <thead>

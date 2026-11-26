@@ -44,22 +44,22 @@ code { font-family: var(--mono); font-size: 0.9em; background: var(--hover); pad
 }
 .side-actions { padding: 10px 8px 6px; display: grid; gap: 1px; }
 .side-btn, .side-link {
-  display: flex; align-items: center; justify-content: space-between; gap: 8px; width: 100%;
-  padding: 5px 10px; border: 0; background: none; border-radius: var(--radius); cursor: pointer; text-align: left; text-decoration: none;
+  display: flex; align-items: center; justify-content: space-between; gap: 8px; width: 100%; height: 28px; line-height: 20px;
+  padding: 0 10px; border: 0; background: none; border-radius: var(--radius); cursor: pointer; text-align: left; text-decoration: none;
 }
 .side-btn:hover, .side-link:hover { background: var(--hover); }
 .side-link.active { background: var(--active); color: var(--text); }
 .side-pad { padding: 4px 14px; }
 .tree { flex: 1; overflow-y: auto; padding: 6px 8px; }
-.tree-item { display: flex; align-items: center; gap: 2px; border-radius: var(--radius); min-height: 28px; padding-right: 4px; }
+.tree-item { display: flex; align-items: center; gap: 2px; border-radius: var(--radius); height: 28px; padding-right: 4px; margin: 1px 0; }
 .tree-item:hover { background: var(--hover); }
-.tree-item.active { background: var(--active); color: var(--text); font-weight: 500; }
+.tree-item.active { background: var(--active); color: var(--text); }
 .chev { width: 20px; height: 20px; flex-shrink: 0; border: 0; background: none; border-radius: 4px; cursor: pointer; color: var(--faint); transition: transform 0.12s; line-height: 1; font-size: 15px; }
 .chev:hover { background: var(--active); }
 .chev.open { transform: rotate(90deg); }
 .chev.empty { visibility: hidden; }
-.tree-link { flex: 1; min-width: 0; display: flex; align-items: center; gap: 6px; text-decoration: none; padding: 3px 0; }
-.tree-icon { width: 18px; text-align: center; flex-shrink: 0; font-size: 14px; }
+.tree-link { flex: 1; min-width: 0; height: 28px; display: flex; align-items: center; gap: 6px; text-decoration: none; line-height: 20px; }
+.tree-icon { width: 18px; height: 18px; display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 13px; line-height: 1; }
 .tree-title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .tree-add { opacity: 0; width: 20px; height: 20px; border: 0; background: none; border-radius: 4px; cursor: pointer; color: var(--muted); line-height: 1; }
 .tree-item:hover .tree-add { opacity: 1; }
@@ -275,7 +275,8 @@ tr:hover .db-open, tr:hover .db-del { opacity: 1; }
 [data-content-type="pdf"], [data-content-type="pdf"] .bn-file-block-content-wrapper { width: 100%; }
 .pdf-viewer { width: 100%; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; background: #fff; }
 .pdf-tools { display: flex; align-items: center; gap: 8px; padding: 6px 10px; border-bottom: 1px solid var(--line); }
-.pdf-tools button { border: 1px solid var(--line); background: #fff; border-radius: 6px; width: 26px; height: 24px; cursor: pointer; }
+.pdf-tools button { border: 1px solid var(--line); background: #fff; border-radius: 6px; min-width: 26px; height: 24px; cursor: pointer; }
+.pdf-tools .pdf-toggle { padding: 0 8px; font-size: 12px; }
 .pdf-pages { overflow: auto; background: #f1f0ee; padding: 12px; -webkit-overflow-scrolling: touch; }
 .pdf-page { margin: 0 auto 12px; background: #fff; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12); }
 
@@ -328,3 +329,15 @@ tr:hover .db-open, tr:hover .db-del { opacity: 1; }
   .history-list { border-right: 0; border-bottom: 1px solid var(--line); max-height: 30vh; }
   .tree-add { opacity: 1; }
 }
+
+/* Selected-block highlight: never on PDF / database / drawing, and gone when you click away */
+[data-content-type="pdf"].ProseMirror-selectednode > :after,
+.ProseMirror-selectednode > [data-content-type="pdf"] > :after,
+[data-content-type="database"].ProseMirror-selectednode > :after,
+.ProseMirror-selectednode > [data-content-type="database"] > :after,
+[data-content-type="drawing"].ProseMirror-selectednode > :after,
+.ProseMirror-selectednode > [data-content-type="drawing"] > :after,
+.bn-editor:not(:focus) .ProseMirror-selectednode > :after,
+.bn-editor:not(:focus) .ProseMirror-selectednode > .bn-block-content > :after { display: none !important; }
+.pdf-collapsed .pdf-tools { border-bottom: 0; }
+.editor-crash { padding: 16px; border: 1px solid var(--line); border-radius: 8px; color: var(--muted); font-size: 14px; display: flex; gap: 12px; align-items: center; justify-content: space-between; }

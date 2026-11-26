@@ -43,6 +43,7 @@ export type Note = NoteSummary & {
   created_at: string;
   database_id: string | null;
   properties: Record<string, unknown>;
+  ydoc: string | null;
   path: { id: string; title: string; icon: string | null }[];
 };
 

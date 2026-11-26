@@ -63,7 +63,7 @@ function PdfPage({ pdf, n, width, zoom }: { pdf: PdfDoc; n: number; width: numbe
   );
 }
 
-function PdfViewer({ url, height }: { url: string; height: number }) {
+function PdfViewer({ url, height, collapsed, onToggle }: { url: string; height: number; collapsed: boolean; onToggle?: () => void }) {
   const [src, setSrc] = useState<string | null>(null);
   const [pdf, setPdf] = useState<PdfDoc | null>(null);
   const [error, setError] = useState("");
@@ -80,7 +80,7 @@ function PdfViewer({ url, height }: { url: string; height: number }) {
   }, [url]);
 
   useEffect(() => {
-    if (!src) return;
+    if (!src || collapsed) return;
     let doc: PdfDoc | null = null;
     loadPdf(src)
       .then((d) => {
@@ -89,7 +89,7 @@ function PdfViewer({ url, height }: { url: string; height: number }) {
       })
       .catch(() => setError("Couldn't open this PDF."));
     return () => doc?.destroy();
-  }, [src]);
+  }, [src, collapsed]);
 
   useEffect(() => {
     const el = box.current;
@@ -100,20 +100,27 @@ function PdfViewer({ url, height }: { url: string; height: number }) {
   }, []);
 
   return (
-    <div className="pdf-viewer" contentEditable={false}>
+    <div className={`pdf-viewer ${collapsed ? "pdf-collapsed" : ""}`} contentEditable={false} onMouseDown={(e) => e.stopPropagation()}>
       <div className="pdf-tools">
-        <span className="muted small">{pdf ? `${pdf.numPages} page${pdf.numPages === 1 ? "" : "s"}` : error || "Loading PDF…"}</span>
+        <span className="muted small">{collapsed ? "PDF" : pdf ? `${pdf.numPages} page${pdf.numPages === 1 ? "" : "s"}` : error || "Loading PDF…"}</span>
         <span style={{ flex: 1 }} />
-        <button onClick={() => setZoom((z) => Math.max(0.5, z - 0.25))}>−</button>
-        <span className="small">{Math.round(zoom * 100)}%</span>
-        <button onClick={() => setZoom((z) => Math.min(3, z + 0.25))}>+</button>
+        {!collapsed && (
+          <>
+            <button onClick={() => setZoom((z) => Math.max(0.5, z - 0.25))}>−</button>
+            <span className="small">{Math.round(zoom * 100)}%</span>
+            <button onClick={() => setZoom((z) => Math.min(3, z + 0.25))}>+</button>
+          </>
+        )}
+        {onToggle && (
+          <button className="pdf-toggle" onClick={onToggle}>{collapsed ? "Show" : "Hide"}</button>
+        )}
         {src && (
           <a href={src} target="_blank" rel="noreferrer" className="small">
             Open ↗
           </a>
         )}
       </div>
-      <div ref={box} className="pdf-pages" style={{ height }}>
+      <div ref={box} className="pdf-pages" style={{ height, display: collapsed ? "none" : undefined }}>
         {pdf && width > 0 && Array.from({ length: pdf.numPages }, (_, i) => <PdfPage key={i} pdf={pdf} n={i + 1} width={width} zoom={zoom} />)}
       </div>
     </div>
@@ -129,6 +136,7 @@ export const PdfBlock = createReactBlockSpec(
       url: { default: "" },
       caption: { default: "" },
       height: { default: 720 },
+      collapsed: { default: false },
     },
     content: "none",
   },
@@ -137,7 +145,14 @@ export const PdfBlock = createReactBlockSpec(
     render: (props) => (
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       <FileBlockWrapper {...(props as any)} buttonIcon={<span>📄</span>}>
-        {props.block.props.url ? <PdfViewer url={props.block.props.url} height={props.block.props.height} /> : null}
+        {props.block.props.url ? (
+          <PdfViewer
+            url={props.block.props.url}
+            height={props.block.props.height}
+            collapsed={props.block.props.collapsed}
+            onToggle={props.editor.isEditable ? () => props.editor.updateBlock(props.block, { props: { collapsed: !props.block.props.collapsed } }) : undefined}
+          />
+        ) : null}
       </FileBlockWrapper>
     ),
     toExternalHTML: ({ block }) =>

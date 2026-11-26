@@ -3,9 +3,10 @@ import { useCallback, useEffect, useRef, useState, type ReactNode } from "react"
 import { api, type Note } from "@/lib/api";
 import { notesChanged } from "@/lib/notesEvents";
 import { EditorClient } from "./ClientOnly";
+import EditorBoundary from "./EditorBoundary";
 import type { EditorHandle, SyncStatus } from "./Editor";
 
-type Pending = Partial<Pick<Note, "title" | "icon" | "is_public" | "content" | "markdown" | "properties">>;
+type Pending = Partial<Pick<Note, "title" | "icon" | "is_public" | "content" | "markdown" | "properties" | "ydoc">>;
 export type SaveState = "saved" | "saving" | "unsaved" | "error";
 
 export type NoteCtx = {
@@ -94,7 +95,7 @@ export default function NoteEditor({
   }, [flush]);
 
   const onReady = useCallback((h: EditorHandle) => (handle.current = h), []);
-  const onEdit = useCallback((content: unknown[], markdown: string) => change({ content, markdown }), [change]);
+  const onEdit = useCallback((content: unknown[], markdown: string, ydoc: string) => change({ content, markdown, ydoc }), [change]);
 
   if (loadError) return <p className="muted">{loadError}</p>;
   if (!note) return <p className="muted small">Loading…</p>;
@@ -128,7 +129,9 @@ export default function NoteEditor({
           onKeyDown={(e) => e.key === "Enter" && handle.current?.editor?.focus()}
         />
         {beforeEditor?.(ctx)}
-        <EditorClient key={note.id} noteId={note.id} initialContent={note.content} onChange={onEdit} onStatus={setSync} onReady={onReady} />
+        <EditorBoundary key={note.id}>
+          <EditorClient noteId={note.id} initialContent={note.content} initialYdoc={note.ydoc} onChange={onEdit} onStatus={setSync} onReady={onReady} />
+        </EditorBoundary>
         {after?.(ctx)}
       </div>
     </>
@@ -137,7 +140,7 @@ export default function NoteEditor({
 
 export function SyncDot({ sync, save }: { sync: SyncStatus; save: SaveState }) {
   const text =
-    save === "error" ? "Not saved" : save === "saving" || save === "unsaved" ? "Saving…" : sync === "offline" ? "Offline" : sync === "connecting" ? "Connecting…" : "Saved";
+    save === "error" ? "Not saved" : save === "saving" || save === "unsaved" ? "Saving…" : sync === "synced" ? "Saved" : "Saved · sync offline";
   return (
     <span className={`sync ${sync} ${save}`} title={sync === "synced" ? "Live sync on" : ""}>
       <span className="dot" />
