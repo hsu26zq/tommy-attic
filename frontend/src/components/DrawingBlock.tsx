@@ -221,7 +221,7 @@ function DrawingCanvas({
           <span className="sep" />
           <button className={`tool ${eraser ? "on" : ""}`} onClick={() => setEraser(!eraser)}>Eraser</button>
           <button className="tool" onClick={undo}>Undo</button>
-          <button className="tool" onClick={() => strokes.length && confirm("Clear the drawing?") && commit([])}>Clear</button>
+          <button className="tool" onClick={() => strokes.length && commit([])} title="Clear (Undo brings it back)">Clear</button>
           <button className={`tool ${penOnly ? "on" : ""}`} onClick={() => setPenOnly(!penOnly)} title="Ignore fingers and palm, draw only with Apple Pencil">
             Pencil only
           </button>

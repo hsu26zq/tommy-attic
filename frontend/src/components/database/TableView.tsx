@@ -8,8 +8,10 @@ import Popover from "./Popover";
 const NAME_W = 260;
 const COL_W = 170;
 
-export default function TableView({ db, rows, editable, saveColumns, addOption, saveRow, addRow, deleteRow, openRow }: DbApi) {
-  const [sort, setSort] = useState<{ col: string; dir: 1 | -1 } | null>(null);
+export default function TableView({ db, rows, editable, saveColumns, addOption, saveRow, addRow, deleteRow, openRow, setView }: DbApi) {
+  // the sort is saved with the database, so it stays when you come back
+  const sort = db.view.sort ?? null;
+  const setSort = (next: (s: typeof sort) => typeof sort) => setView({ ...db.view, sort: next(sort) ?? undefined });
   const [menu, setMenu] = useState<{ id: string; el: HTMLElement } | null>(null);
   const [widths, setWidths] = useState<Record<string, number>>({});
   const [dragRow, setDragRow] = useState<string | null>(null);

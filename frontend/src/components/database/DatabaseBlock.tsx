@@ -8,6 +8,7 @@ import { optionsOf, valueText } from "./PropertyCell";
 import { type DbApi } from "./shared";
 import TableView from "./TableView";
 import Popover from "./Popover";
+import { toast } from "@/lib/exportNote";
 import BoardView from "./BoardView";
 import CalendarView from "./CalendarView";
 
@@ -141,9 +142,15 @@ function DatabaseView({ databaseId, editable }: { databaseId: string; editable: 
       return full;
     },
     deleteRow: (row) => {
-      if (!confirm(`Delete "${row.title || "Untitled"}"?`)) return;
       setRows((rs) => rs.filter((r) => r.id !== row.id));
-      api(`/notes/${row.id}?forever=1`, { method: "DELETE" }).catch(() => {});
+      api(`/notes/${row.id}`, { method: "DELETE" }).catch(() => {});
+      toast("Row deleted", {
+        label: "Undo",
+        run: async () => {
+          await api(`/notes/${row.id}/restore`, { method: "POST" }).catch(() => {});
+          load();
+        },
+      });
     },
     openRow: setOpenRow,
     setView,

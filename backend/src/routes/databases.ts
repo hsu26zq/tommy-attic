@@ -42,6 +42,10 @@ function cleanView(v: unknown) {
     layout: ["table", "board", "calendar"].includes(String(o.layout)) ? o.layout : "table",
     groupBy: str(o.groupBy),
     dateBy: str(o.dateBy),
+    sort:
+      o.sort && typeof o.sort === "object" && typeof (o.sort as { col?: unknown }).col === "string"
+        ? { col: String((o.sort as { col: string }).col).slice(0, 40), dir: (o.sort as { dir?: number }).dir === -1 ? -1 : 1 }
+        : undefined,
     filters: Array.isArray(o.filters)
       ? o.filters.slice(0, 10).map((f) => ({ col: str(f?.col) ?? "", value: String(f?.value ?? "").slice(0, 100) }))
       : [],
