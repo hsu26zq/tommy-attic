@@ -134,7 +134,6 @@ export default function Sidebar({ notes, open, onClose }: { notes: NoteSummary[]
         <div className="side-actions">
           <button className="side-btn" onClick={openSearch}>
             <span>Search</span>
-            <kbd>⌘K</kbd>
           </button>
           <button className="side-btn" onClick={() => create(null)}>
             <span>New page</span>
