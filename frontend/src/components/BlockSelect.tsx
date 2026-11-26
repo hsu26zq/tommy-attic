@@ -1,5 +1,7 @@
 "use client";
 import { useEffect, useRef } from "react";
+import { useExtensionState } from "@blocknote/react";
+import { SideMenuExtension } from "@blocknote/core/extensions";
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type Editor = any;
 
@@ -13,6 +15,11 @@ const NOT_START = ".bn-block-content, .bn-side-menu, button, input, textarea, se
 
 export default function BlockSelect({ editor }: { editor: Editor }) {
   const selected = useRef<string[]>([]);
+  // the block whose ⋮⋮ handle is showing (that's the one that gets dragged)
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const handleBlock = useExtensionState(SideMenuExtension as any, { editor, selector: (s: any) => s?.block?.id }) as string | undefined;
+  const handleRef = useRef<string | undefined>(undefined);
+  handleRef.current = handleBlock;
 
   useEffect(() => {
     const root = () => editor?.domElement as HTMLElement | undefined;
@@ -201,6 +208,49 @@ export default function BlockSelect({ editor }: { editor: Editor }) {
     const onCut = (e: ClipboardEvent) => copy(e, true);
     const onFocusIn = (e: FocusEvent) => root()?.contains(e.target as Node) && clear();
 
+    // Dropping a dragged block below the last block puts it at the end of the page.
+    // (Left alone, the editor drops it into the nearest block — inside the last column if the page ends in columns.)
+    let dragged: string | null = null;
+    function dragStart(e: DragEvent) {
+      dragged = (e.target as HTMLElement)?.closest?.(".bn-side-menu") ? (handleRef.current ?? null) : null;
+    }
+    function belowLast(e: DragEvent) {
+      const group = root()?.querySelector(":scope > .bn-block-group");
+      if (!group || !(e.target as HTMLElement)?.closest?.(".main")) return false;
+      const tops = Array.from(group.children).filter((el) => !el.classList.contains("bn-trailing-block"));
+      const last = tops.at(-1) as HTMLElement | undefined;
+      return !!last && e.clientY > last.getBoundingClientRect().bottom;
+    }
+    // anywhere below the last block accepts the drop
+    function overBelow(e: DragEvent) {
+      if (!dragged || !belowLast(e)) return;
+      e.preventDefault();
+      if (e.dataTransfer) e.dataTransfer.dropEffect = "move";
+    }
+    function dropBelow(e: DragEvent) {
+      const id = dragged;
+      dragged = null;
+      if (!id || !belowLast(e)) return;
+      e.preventDefault();
+      e.stopImmediatePropagation();
+      const block = editor.getBlock(id);
+      const end = editor.document.at(-1);
+      if (block && end && end.id !== id) {
+        editor.transact(() => {
+          editor.removeBlocks([id]);
+          editor.insertBlocks([block], editor.document.at(-1), "after");
+        });
+      }
+      // finish the drag the way the editor would
+      if (editor.prosemirrorView) editor.prosemirrorView.dragging = null;
+      document.querySelectorAll(".bn-drag-preview").forEach((p) => p.remove());
+    }
+    document.addEventListener("dragstart", dragStart, true);
+    document.addEventListener("drop", dropBelow, true);
+    document.addEventListener("dragover", overBelow, true);
+    const dragDone = () => setTimeout(() => (dragged = null), 0);
+    document.addEventListener("dragend", dragDone, true);
+
     window.addEventListener("mousedown", down);
     window.addEventListener("mousemove", move);
     window.addEventListener("mouseup", up);
@@ -219,6 +269,10 @@ export default function BlockSelect({ editor }: { editor: Editor }) {
       document.removeEventListener("copy", onCopy);
       document.removeEventListener("cut", onCut);
       document.removeEventListener("focusin", onFocusIn);
+      document.removeEventListener("dragstart", dragStart, true);
+      document.removeEventListener("drop", dropBelow, true);
+      document.removeEventListener("dragover", overBelow, true);
+      document.removeEventListener("dragend", dragDone, true);
     };
   }, [editor]);
 
