@@ -28,7 +28,7 @@ export default function LoginPage() {
     const fromLink = window.location.hash.includes("access_token");
     sb.auth.getSession().then(async ({ data }) => {
       if (data.session) {
-        if (fromLink) await afterLogin("email-link");
+        if (fromLink) void afterLogin("email-link");
         router.replace("/edit");
       }
     });
@@ -47,7 +47,7 @@ export default function LoginPage() {
       const { error: verifyError } = await passkey.verifyAuthentication({ challengeId: data.challenge_id, credential });
       if (verifyError) throw verifyError;
       // "platform" = this device's own Face ID / Touch ID; "cross-platform" = phone QR scan or security key
-      await afterLogin(credential.authenticatorAttachment ?? "unknown");
+      void afterLogin(credential.authenticatorAttachment ?? "unknown"); // runs in background, no waiting
       router.replace("/edit");
     } catch (e) {
       setStatus("");
@@ -83,7 +83,7 @@ export default function LoginPage() {
       setError("Wrong email or password.");
       return;
     }
-    await afterLogin("password");
+    void afterLogin("password");
     router.replace("/edit");
   }
 
@@ -98,7 +98,7 @@ export default function LoginPage() {
       setError(err.message.includes("expired") || err.message.includes("invalid") ? "That code is wrong or expired." : err.message);
       return;
     }
-    await afterLogin("email-code");
+    void afterLogin("email-code");
     router.replace("/edit");
   }
 
