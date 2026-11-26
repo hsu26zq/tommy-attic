@@ -1,0 +1,25 @@
+# Run the whole site on your own computer:
+#   1. copy .env.example to .env and fill it in
+#   2. docker compose up --build
+#   3. open http://localhost:3000
+services:
+  backend:
+    build: ./backend
+    env_file: .env
+    environment:
+      NODE_ENV: development
+      PORT: 8080
+    ports:
+      - "8080:8080"
+
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        NEXT_PUBLIC_SUPABASE_URL: ${SUPABASE_URL}
+        NEXT_PUBLIC_SUPABASE_KEY: ${SUPABASE_PUBLISHABLE_KEY}
+        API_URL: http://backend:8080
+    depends_on:
+      - backend
+    ports:
+      - "3000:3000"
