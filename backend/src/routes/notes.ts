@@ -5,22 +5,12 @@ import { requireOwner, type AuthVars } from "../auth.js";
 const notes = new Hono<{ Variables: AuthVars }>();
 notes.use("*", requireOwner);
 
-const LIST_FIELDS = "id,title,icon,parent_id,position,pinned,wide,is_public,slug,updated_at,published_at";
+const LIST_FIELDS = "id,title,icon,parent_id,position,pinned,wide,updated_at";
 const VERSION_EVERY_MS = 10 * 60 * 1000; // keep a history snapshot at most every 10 minutes
 const MAX_VERSIONS = 50;
 
 function fail(error: { message: string } | null) {
   if (error) throw new HTTPException(500, { message: error.message });
-}
-
-function slugify(title: string): string {
-  const base = title
-    .toLowerCase()
-    .normalize("NFKD")
-    .replace(/[^\p{L}\p{N}]+/gu, "-")
-    .replace(/^-+|-+$/g, "")
-    .slice(0, 60);
-  return `${base || "note"}-${Math.random().toString(36).slice(2, 7)}`;
 }
 
 // All pages (not database rows, not in the trash) — the sidebar builds the tree from parent_id
@@ -143,7 +133,7 @@ notes.patch("/:id", async (c) => {
   const body = await c.req.json();
   const { data: current, error: readError } = await c.var.db
     .from("notes")
-    .select("slug,published_at,title,markdown")
+    .select("title,markdown")
     .eq("id", id)
     .maybeSingle();
   fail(readError);
@@ -171,11 +161,6 @@ notes.patch("/:id", async (c) => {
   if (typeof body.cover === "string" || body.cover === null) update.cover = body.cover ? body.cover.slice(0, 500) : null;
   if (typeof body.wide === "boolean") update.wide = body.wide;
   if (typeof body.pinned === "boolean") update.pinned = body.pinned;
-  if (typeof body.is_public === "boolean") {
-    update.is_public = body.is_public;
-    if (body.is_public && !current.slug) update.slug = slugify((update.title as string) ?? current.title);
-    if (body.is_public && !current.published_at) update.published_at = update.updated_at;
-  }
 
   const { data, error } = await c.var.db.from("notes").update(update).eq("id", id).select(LIST_FIELDS).single();
   fail(error);

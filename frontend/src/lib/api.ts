@@ -41,10 +41,7 @@ export type NoteSummary = {
   position: number;
   pinned: boolean;
   wide: boolean;
-  is_public: boolean;
-  slug: string | null;
   updated_at: string;
-  published_at: string | null;
 };
 
 export type Note = NoteSummary & {

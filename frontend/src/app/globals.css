@@ -164,7 +164,6 @@ input:focus { border-color: var(--faint); }
   font: 700 40px/1.2 var(--font); color: var(--text); background: transparent;
 }
 .page-title::placeholder { color: var(--line); }
-.page-heading { font-size: 32px; line-height: 1.2; margin: 0 0 24px; font-weight: 700; }
 .empty-state { min-height: 70vh; display: grid; place-content: center; justify-items: center; gap: 12px; text-align: center; color: var(--muted); }
 .empty-state p { margin: 0; }
 
@@ -300,7 +299,6 @@ tr:hover .db-open, tr:hover .db-del { opacity: 1; }
 .drawing-tools + .drawing-canvas { border-radius: 0 0 8px 8px; }
 .drawing-canvas.editable { cursor: crosshair; }
 .drawing-canvas.erasing { cursor: cell; }
-.article .drawing-canvas { border: none; }
 
 /* ---------- pdf ---------- */
 [data-content-type="pdf"], [data-content-type="pdf"] .bn-file-block-content-wrapper { width: 100%; }
@@ -333,16 +331,6 @@ tr:hover .db-open, tr:hover .db-del { opacity: 1; }
 .qr-empty { box-shadow: 0 0 0 1px var(--line) inset; }
 
 /* ---------- public notes ---------- */
-.article-head { margin-bottom: 16px; }
-.article-head h1 { font-size: 40px; line-height: 1.2; margin: 4px 0 0; }
-.entry-meta { font-size: 13px; color: var(--faint); }
-.article .bn-editor { padding-inline: 0 !important; }
-.entry-list { list-style: none; padding: 0; margin: 0; }
-.entry-list li { border-bottom: 1px solid var(--line); }
-.entry-list a { display: block; padding: 14px 4px; text-decoration: none; }
-.entry-list a:hover h3 { text-decoration: underline; }
-.entry-list h3 { margin: 2px 0; font-size: 17px; font-weight: 600; }
-.entry-list p { margin: 2px 0 0; color: var(--muted); font-size: 14px; }
 .empty { color: var(--muted); padding: 24px 0; }
 
 /* ---------- phones ---------- */

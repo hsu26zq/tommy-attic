@@ -10,7 +10,7 @@ import { EditorClient } from "./ClientOnly";
 import EditorBoundary from "./EditorBoundary";
 import type { EditorHandle } from "./Editor";
 
-type Pending = Partial<Pick<Note, "title" | "icon" | "cover" | "is_public" | "content" | "markdown" | "properties" | "ydoc">>;
+type Pending = Partial<Pick<Note, "title" | "icon" | "cover" | "content" | "markdown" | "properties" | "ydoc">>;
 export type SaveState = "saved" | "saving" | "unsaved" | "error";
 
 export type NoteCtx = {
@@ -56,7 +56,7 @@ export default function NoteEditor({
       .then((fresh) =>
         setNote((cur) =>
           cur && cur.id === id
-            ? { ...cur, title: fresh.title, icon: fresh.icon, cover: fresh.cover, wide: fresh.wide, is_public: fresh.is_public, slug: fresh.slug, properties: fresh.properties, path: fresh.path }
+            ? { ...cur, title: fresh.title, icon: fresh.icon, cover: fresh.cover, wide: fresh.wide, properties: fresh.properties, path: fresh.path }
             : fresh,
         ),
       )
@@ -81,7 +81,7 @@ export default function NoteEditor({
     try {
       await api(`/notes/${id}`, { method: "PATCH", body: JSON.stringify(changes) });
       setSave(Object.keys(pending.current).length ? "unsaved" : "saved");
-      if ("title" in changes || "icon" in changes || "is_public" in changes) notesChanged();
+      if ("title" in changes || "icon" in changes) notesChanged();
     } catch {
       pending.current = { ...changes, ...pending.current };
       setSave("error");

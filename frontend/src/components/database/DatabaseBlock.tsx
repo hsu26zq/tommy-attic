@@ -20,7 +20,7 @@ async function loadEditable(id: string) {
   return api<{ database: Database; rows: Row[] }>(`/databases/${id}`);
 }
 
-// Visitors read public databases straight from the database (security rules allow it).
+// Read-only views (like version history) read the database directly.
 async function loadPublic(id: string) {
   const sb = supabase();
   const [{ data: database }, { data: rows }] = await Promise.all([
