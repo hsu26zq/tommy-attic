@@ -89,3 +89,23 @@ end; $$;
 revoke execute on function public.block_signups() from public, anon, authenticated;
 create trigger block_signups before insert on auth.users
 for each row execute function public.block_signups();
+
+-- Backups: returns every note to whoever knows the secret backup token.
+-- Set it with: update public.settings set backup_token_hash = encode(extensions.digest('<token>','sha256'),'hex');
+create extension if not exists pgcrypto with schema extensions;
+alter table public.settings add column if not exists backup_token_hash text;
+create or replace function public.export_notes(token text) returns jsonb
+language plpgsql security definer set search_path = public, extensions as $$
+declare h text;
+begin
+  select backup_token_hash into h from public.settings where id = 1;
+  if h is null or encode(extensions.digest(token, 'sha256'), 'hex') <> h then
+    raise exception 'invalid token';
+  end if;
+  return coalesce((
+    select jsonb_agg(to_jsonb(n) order by n.created_at)
+    from (select id, title, type, is_public, slug, content, markdown, created_at, updated_at, published_at from public.notes) n
+  ), '[]'::jsonb);
+end; $$;
+revoke execute on function public.export_notes(text) from public;
+grant execute on function public.export_notes(text) to anon, authenticated;
