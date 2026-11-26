@@ -102,4 +102,30 @@ qr.post("/:id/approve", requireOwner, async (c) => {
   return c.json({ ok: true });
 });
 
+// New passkey: a one-time setup code (set in the database, expires in 30 minutes) logs you in once
+// so this phone can register a fresh passkey. The code is wiped as soon as it's used.
+qr.post("/setup", async (c) => {
+  const { code } = await c.req.json().catch(() => ({ code: "" }));
+  if (typeof code !== "string" || code.length < 20) throw new HTTPException(400, { message: "This setup link isn't valid" });
+  const db = admin();
+  const { data: s } = await db.from("settings").select("owner_id,setup_code_hash,setup_expires_at").eq("id", 1).maybeSingle();
+  if (!s?.setup_code_hash || s.setup_code_hash !== hash(code)) throw new HTTPException(403, { message: "This setup link isn't valid or was already used" });
+  if (!s.setup_expires_at || new Date(s.setup_expires_at) < new Date()) throw new HTTPException(410, { message: "This setup link expired" });
+
+  // Use it up first, so it can never work twice
+  const { data: used } = await db
+    .from("settings")
+    .update({ setup_code_hash: null, setup_expires_at: null })
+    .eq("id", 1)
+    .eq("setup_code_hash", hash(code))
+    .select("id");
+  if (!used?.length) throw new HTTPException(403, { message: "This setup link was already used" });
+
+  const { data: owner } = await db.auth.admin.getUserById(s.owner_id);
+  if (!owner?.user?.email) throw new HTTPException(500, { message: "Owner account not found" });
+  const { data: link, error } = await db.auth.admin.generateLink({ type: "magiclink", email: owner.user.email });
+  if (error || !link.properties?.hashed_token) throw new HTTPException(500, { message: error?.message ?? "Couldn't create login" });
+  return c.json({ tokenHash: link.properties.hashed_token });
+});
+
 export default qr;
