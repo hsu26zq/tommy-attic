@@ -28,14 +28,28 @@ export async function api<T = unknown>(path: string, init: RequestInit = {}): Pr
 export type NoteSummary = {
   id: string;
   title: string;
-  type: "note" | "post";
+  icon: string | null;
+  parent_id: string | null;
+  position: number;
   is_public: boolean;
   slug: string | null;
   updated_at: string;
   published_at: string | null;
 };
 
-export type Note = NoteSummary & { content: unknown[]; markdown: string; created_at: string };
+export type Note = NoteSummary & {
+  content: unknown[];
+  markdown: string;
+  created_at: string;
+  database_id: string | null;
+  properties: Record<string, unknown>;
+  path: { id: string; title: string; icon: string | null }[];
+};
+
+export type ColumnType = "text" | "number" | "tags" | "url" | "checkbox" | "date";
+export type Column = { id: string; name: string; type: ColumnType };
+export type Database = { id: string; note_id: string; columns: Column[] };
+export type Row = { id: string; title: string; icon: string | null; properties: Record<string, unknown>; position: number };
 
 export type Device = {
   id: string;

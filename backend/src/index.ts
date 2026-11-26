@@ -8,6 +8,7 @@ import { collabConfig } from "./collab.js";
 import notes from "./routes/notes.js";
 import devices from "./routes/devices.js";
 import qr from "./routes/qr.js";
+import databases from "./routes/databases.js";
 
 // The website reaches the REST API through its own /api/* path (a Vercel rewrite),
 // so browsers see one site and cookies stay first-party.
@@ -20,6 +21,7 @@ app.get("/health", (c) => c.json({ ok: true }));
 app.route("/notes", notes);
 app.route("/devices", devices);
 app.route("/auth/qr", qr);
+app.route("/databases", databases);
 
 app.onError((err, c) => {
   if (err instanceof HTTPException) return c.json({ error: err.message }, err.status);

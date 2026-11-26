@@ -1,25 +1,18 @@
 # Roadmap
 
 ## Done
-- Editor (BlockNote): tables, code, images, video, PDF reader, drawing (Apple Pencil), columns
-- Public / private notes, blog
-- Login (passkey, password, email), trusted devices
+- Editor: tables, code (highlighted), images, video, PDF reader, drawing (Apple Pencil), columns
+- Nested pages, search (⌘K), trash, version history, `@` links + backlinks
+- Databases (table view; rows are pages)
+- Notion import (Markdown & CSV export)
+- Publish any page to the web
+- Login: QR + Face ID; trusted devices (approved in Supabase); email on every login
 - Live sync, offline on trusted devices
 - Nightly backups, keep-awake job
+- Minimal design
 
-## Core (to fully replace Notion)
-1. Search
-2. Nested pages (sidebar tree)
-3. Database (table view)
-4. Notion import
-5. Note links + backlinks
-6. Version history
-7. Trash (restore deleted notes)
-
-## Nice to have
+## Later
+- Database board / calendar views
 - Claude (MCP)
-- Tags
 - Templates
 - Dark mode
-- Comments
-- Minimal redesign (Apple-style: clean, simple)

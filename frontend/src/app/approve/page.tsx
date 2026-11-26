@@ -69,8 +69,8 @@ export default function Approve() {
   if (!session) {
     const next = encodeURIComponent(`/approve?r=${id}`);
     return (
-      <div className="container">
-        <div className="login-box card">
+      <div className="auth-wrap">
+        <div className="auth-box">
           <h1 style={{ marginTop: 0 }}>Approve login</h1>
           <p className="muted">Log in on this phone first, then the approval opens.</p>
           <a className="btn" href={`/login?next=${next}`}>Log in on this phone</a>
@@ -80,8 +80,8 @@ export default function Approve() {
   }
 
   return (
-    <div className="container">
-      <div className="login-box card" style={{ textAlign: "center" }}>
+    <div className="auth-wrap">
+      <div className="auth-box" style={{ textAlign: "center" }}>
         {state === "loading" && <p className="muted">Loading…</p>}
         {state === "error" && (
           <>

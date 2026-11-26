@@ -1,6 +1,6 @@
 # Tommy's Attic
 
-My personal website: a blog, public notes, and a private Notion-style notebook only I can edit.
+My notes: a private Notion-style notebook only I can edit. Any page can be published to the web.
 
 ## How it fits together
 
@@ -18,16 +18,22 @@ Supabase – notes, login (passkeys), trusted devices, files
 |---|---|---|
 | `frontend/` | Website + editor | Vercel |
 | `backend/` | API | Render (Docker) |
-| `database/migrations/` | Tables + security rules | Supabase |
+| `database/migrations/` | Tables + security rules (run in order) | Supabase |
 
 ## Security
 
-1. **Login:** passkeys (Face ID / Touch ID, or scan a QR code with your phone). Email link as backup.
+1. **Login:** scan a QR code with your iPhone and approve with Face ID (on the iPhone itself: Face ID directly).
 2. **Backend:** every write is checked against the owner account.
 3. **Database:** Row Level Security. Visitors can only read notes marked public.
 
-Trusted devices stay logged in. QR login: scan with your iPhone and approve with Face ID. Every other device gets a short session (logged out when the
-browser closes or after 30 minutes idle) and triggers a login alert.
+Trusted devices stay logged in. A device is trusted only by setting `approved = true` in the
+Supabase `devices` table. Other devices get a short session (logged out when the browser closes or
+after 30 minutes idle). Every login sends an alert email.
+
+## Features
+
+Nested pages, search (⌘K), trash, version history, `@` links + backlinks, databases (table view),
+Notion import, live sync between devices, drawing (Apple Pencil), PDF reader, code highlighting.
 
 ## Run it locally
 
@@ -43,8 +49,8 @@ Without Docker: `cd backend && npm i && npm run dev`, then `cd frontend && npm i
 
 | Where | Variable |
 |---|---|
-| Vercel | `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_KEY`, `API_URL` (the Render URL) |
-| Render | `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY`, optional `RESEND_API_KEY`, `ALERT_EMAIL` |
+| Vercel | `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_KEY`, `API_URL` (Render URL), `NEXT_PUBLIC_COLLAB_URL` (Render `wss://` URL) |
+| Render | `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY`, `SUPABASE_SECRET_KEY` (QR login), `RESEND_API_KEY` + `ALERT_EMAIL` (login emails) |
 
 ## Licenses
 

@@ -5,7 +5,13 @@ import { requireOwner, type AuthVars } from "../auth.js";
 const notes = new Hono<{ Variables: AuthVars }>();
 notes.use("*", requireOwner);
 
-const LIST_FIELDS = "id,title,type,is_public,slug,updated_at,published_at";
+const LIST_FIELDS = "id,title,icon,parent_id,position,is_public,slug,updated_at,published_at";
+const VERSION_EVERY_MS = 10 * 60 * 1000; // keep a history snapshot at most every 10 minutes
+const MAX_VERSIONS = 50;
+
+function fail(error: { message: string } | null) {
+  if (error) throw new HTTPException(500, { message: error.message });
+}
 
 function slugify(title: string): string {
   const base = title
@@ -17,56 +23,138 @@ function slugify(title: string): string {
   return `${base || "note"}-${Math.random().toString(36).slice(2, 7)}`;
 }
 
-// List all notes (private and public)
+// All pages (not database rows, not in the trash) — the sidebar builds the tree from parent_id
 notes.get("/", async (c) => {
-  const { data, error } = await c.var.db.from("notes").select(LIST_FIELDS).order("updated_at", { ascending: false });
-  if (error) throw new HTTPException(500, { message: error.message });
+  const { data, error } = await c.var.db
+    .from("notes")
+    .select(LIST_FIELDS)
+    .is("database_id", null)
+    .is("deleted_at", null)
+    .order("position")
+    .order("created_at");
+  fail(error);
   return c.json(data);
 });
 
-// New note
-notes.post("/", async (c) => {
-  const body = await c.req.json().catch(() => ({}));
-  const type = body.type === "post" ? "post" : "note";
+// Search titles and text
+notes.get("/search", async (c) => {
+  const q = (c.req.query("q") ?? "").replace(/[,()%*\\]/g, " ").trim().slice(0, 100);
+  if (!q) return c.json([]);
   const { data, error } = await c.var.db
     .from("notes")
-    .insert({ title: body.title ?? "Untitled", type })
-    .select("*")
-    .single();
-  if (error) throw new HTTPException(500, { message: error.message });
+    .select("id,title,icon,markdown,database_id")
+    .is("deleted_at", null)
+    .or(`title.ilike.%${q}%,markdown.ilike.%${q}%`)
+    .order("updated_at", { ascending: false })
+    .limit(20);
+  fail(error);
+  const lower = q.toLowerCase();
+  return c.json(
+    (data ?? []).map((n) => {
+      const i = n.markdown.toLowerCase().indexOf(lower);
+      const snippet = i >= 0 ? n.markdown.slice(Math.max(0, i - 40), i + 80).replace(/\s+/g, " ") : "";
+      return { id: n.id, title: n.title, icon: n.icon, snippet, isRow: !!n.database_id };
+    }),
+  );
+});
+
+// Trash
+notes.get("/trash", async (c) => {
+  const { data, error } = await c.var.db
+    .from("notes")
+    .select("id,title,icon,parent_id,deleted_at")
+    .not("deleted_at", "is", null)
+    .is("database_id", null)
+    .order("deleted_at", { ascending: false });
+  fail(error);
+  // Only show the top of each deleted branch
+  const ids = new Set((data ?? []).map((n) => n.id));
+  return c.json((data ?? []).filter((n) => !n.parent_id || !ids.has(n.parent_id)));
+});
+
+notes.post("/trash/empty", async (c) => {
+  const { error } = await c.var.db.from("notes").delete().not("deleted_at", "is", null);
+  fail(error);
+  return c.body(null, 204);
+});
+
+// New page (or database row when database_id is given)
+notes.post("/", async (c) => {
+  const body = await c.req.json().catch(() => ({}));
+  const parent_id = typeof body.parent_id === "string" ? body.parent_id : null;
+  const database_id = typeof body.database_id === "string" ? body.database_id : null;
+
+  let last = c.var.db.from("notes").select("position").order("position", { ascending: false }).limit(1);
+  last = database_id
+    ? last.eq("database_id", database_id)
+    : parent_id
+      ? last.eq("parent_id", parent_id)
+      : last.is("parent_id", null).is("database_id", null);
+  const { data: lastRow } = await last.maybeSingle();
+
+  const insert: Record<string, unknown> = {
+    title: typeof body.title === "string" ? body.title.slice(0, 300) : "Untitled",
+    parent_id,
+    database_id,
+    position: (lastRow?.position ?? 0) + 1,
+  };
+  if (typeof body.icon === "string") insert.icon = body.icon.slice(0, 16);
+  if (body.properties && typeof body.properties === "object") insert.properties = body.properties;
+  if (Array.isArray(body.content)) insert.content = body.content;
+  if (typeof body.markdown === "string") insert.markdown = body.markdown;
+
+  const { data, error } = await c.var.db.from("notes").insert(insert).select("*").single();
+  fail(error);
   return c.json(data, 201);
 });
 
-// One note, full content
+// One note with its path (breadcrumbs)
 notes.get("/:id", async (c) => {
-  const { data, error } = await c.var.db.from("notes").select("*").eq("id", c.req.param("id")).maybeSingle();
-  if (error) throw new HTTPException(500, { message: error.message });
+  const id = c.req.param("id");
+  const [{ data, error }, { data: path }] = await Promise.all([
+    c.var.db.from("notes").select("*").eq("id", id).maybeSingle(),
+    c.var.db.rpc("note_ancestors", { target: id }),
+  ]);
+  fail(error);
   if (!data) throw new HTTPException(404, { message: "Note not found" });
-  return c.json(data);
+  return c.json({ ...data, path: path ?? [] });
 });
 
-// Save a note. If `base_updated_at` doesn't match, the note changed on another
-// device since it was opened, so we refuse (409) instead of overwriting.
+notes.get("/:id/backlinks", async (c) => {
+  const { data, error } = await c.var.db.rpc("note_backlinks", { target: c.req.param("id") });
+  fail(error);
+  return c.json(data ?? []);
+});
+
+// Save. Live sync merges the edits themselves; this keeps title, settings and the readable copies.
 notes.patch("/:id", async (c) => {
   const id = c.req.param("id");
   const body = await c.req.json();
   const { data: current, error: readError } = await c.var.db
     .from("notes")
-    .select("updated_at,slug,published_at,title")
+    .select("slug,published_at,title,markdown")
     .eq("id", id)
     .maybeSingle();
-  if (readError) throw new HTTPException(500, { message: readError.message });
+  fail(readError);
   if (!current) throw new HTTPException(404, { message: "Note not found" });
-
-  if (body.base_updated_at && new Date(body.base_updated_at).getTime() !== new Date(current.updated_at).getTime()) {
-    return c.json({ error: "conflict", updated_at: current.updated_at }, 409);
-  }
 
   const update: Record<string, unknown> = { updated_at: new Date().toISOString() };
   if (typeof body.title === "string") update.title = body.title.slice(0, 300) || "Untitled";
-  if (body.type === "note" || body.type === "post") update.type = body.type;
+  if (typeof body.icon === "string" || body.icon === null) update.icon = body.icon;
   if (Array.isArray(body.content)) update.content = body.content;
   if (typeof body.markdown === "string") update.markdown = body.markdown;
+  if (body.properties && typeof body.properties === "object") update.properties = body.properties;
+  if ("parent_id" in body) {
+    if (body.parent_id === id) throw new HTTPException(400, { message: "A page can't be inside itself" });
+    if (body.parent_id) {
+      const { data: path } = await c.var.db.rpc("note_ancestors", { target: body.parent_id });
+      if ((path ?? []).some((p: { id: string }) => p.id === id)) {
+        throw new HTTPException(400, { message: "A page can't move inside its own sub-page" });
+      }
+    }
+    update.parent_id = body.parent_id || null;
+  }
+  if (typeof body.position === "number") update.position = body.position;
   if (typeof body.is_public === "boolean") {
     update.is_public = body.is_public;
     if (body.is_public && !current.slug) update.slug = slugify((update.title as string) ?? current.title);
@@ -74,14 +162,83 @@ notes.patch("/:id", async (c) => {
   }
 
   const { data, error } = await c.var.db.from("notes").update(update).eq("id", id).select(LIST_FIELDS).single();
-  if (error) throw new HTTPException(500, { message: error.message });
+  fail(error);
+
+  // History snapshot (at most every 10 minutes, keep the latest 50)
+  if (Array.isArray(body.content) && body.markdown !== current.markdown) {
+    const { data: lastV } = await c.var.db
+      .from("note_versions")
+      .select("created_at")
+      .eq("note_id", id)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (!lastV || Date.now() - new Date(lastV.created_at).getTime() > VERSION_EVERY_MS) {
+      await c.var.db.from("note_versions").insert({
+        note_id: id,
+        title: (update.title as string) ?? current.title,
+        content: body.content,
+        markdown: body.markdown ?? "",
+      });
+      const { data: old } = await c.var.db
+        .from("note_versions")
+        .select("id")
+        .eq("note_id", id)
+        .order("created_at", { ascending: false })
+        .range(MAX_VERSIONS, MAX_VERSIONS + 100);
+      if (old?.length) await c.var.db.from("note_versions").delete().in("id", old.map((v) => v.id));
+    }
+  }
   return c.json(data);
 });
 
+// Move to trash (with everything under it). ?forever=1 deletes permanently.
 notes.delete("/:id", async (c) => {
-  const { error } = await c.var.db.from("notes").delete().eq("id", c.req.param("id"));
-  if (error) throw new HTTPException(500, { message: error.message });
+  const id = c.req.param("id");
+  if (c.req.query("forever")) {
+    const { error } = await c.var.db.from("notes").delete().eq("id", id);
+    fail(error);
+  } else {
+    const { error } = await c.var.db.rpc("set_trashed", { root: id, trashed: true });
+    fail(error);
+  }
   return c.body(null, 204);
+});
+
+// Restore from trash. If its parent is still in the trash, it comes back at the top level.
+notes.post("/:id/restore", async (c) => {
+  const id = c.req.param("id");
+  const { error } = await c.var.db.rpc("set_trashed", { root: id, trashed: false });
+  fail(error);
+  const { data: note } = await c.var.db.from("notes").select("parent_id").eq("id", id).maybeSingle();
+  if (note?.parent_id) {
+    const { data: parent } = await c.var.db.from("notes").select("deleted_at").eq("id", note.parent_id).maybeSingle();
+    if (!parent || parent.deleted_at) await c.var.db.from("notes").update({ parent_id: null }).eq("id", id);
+  }
+  return c.json({ ok: true });
+});
+
+// Version history
+notes.get("/:id/versions", async (c) => {
+  const { data, error } = await c.var.db
+    .from("note_versions")
+    .select("id,title,created_at")
+    .eq("note_id", c.req.param("id"))
+    .order("created_at", { ascending: false });
+  fail(error);
+  return c.json(data ?? []);
+});
+
+notes.get("/:id/versions/:vid", async (c) => {
+  const { data, error } = await c.var.db
+    .from("note_versions")
+    .select("*")
+    .eq("note_id", c.req.param("id"))
+    .eq("id", c.req.param("vid"))
+    .maybeSingle();
+  fail(error);
+  if (!data) throw new HTTPException(404, { message: "Version not found" });
+  return c.json(data);
 });
 
 export default notes;

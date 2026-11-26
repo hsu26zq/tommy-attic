@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import * as WebAuthn from "@simplewebauthn/browser";
 import { api, type Device } from "@/lib/api";
 import { isTrustedHere, setTrustedHere, supabase } from "@/lib/supabase";
+import { Topbar } from "@/components/workspace/Workspace";
 
 type PasskeyApi = {
   startRegistration: () => Promise<{ data: { options: unknown; challenge_id: string } | null; error: Error | null }>;
@@ -115,72 +116,69 @@ export default function Settings() {
   const fmt = (s?: string) => (s ? new Date(s).toLocaleString() : "");
 
   return (
-    <div style={{ paddingBottom: 40 }}>
-      <h1 style={{ marginTop: 0 }}>Settings &amp; devices</h1>
-      {msg && <div className="notice ok">{msg}</div>}
-      {err && <div className="notice">{err}</div>}
+    <>
+      <Topbar crumbs={<span className="crumb current">Settings</span>} />
+      <div className="page">
+        <h1 className="page-heading">Settings</h1>
+        {msg && <p className="ok small">{msg}</p>}
+        {err && <p className="error small">{err}</p>}
 
-      <div className="card">
-        <h2>This device</h2>
-        {!me && (
-          <>
-            <p className="muted">This device isn&apos;t trusted, so you&apos;ll be logged out when the browser closes or after 30 minutes idle.</p>
-            <button className="btn" onClick={trustThisDevice}>Trust this device</button>
-          </>
-        )}
-        {me && me.approved && <p>✅ <b>{me.name}</b> is trusted. You stay logged in here.</p>}
-        {me && !me.approved && (
-          <>
-            <p>Waiting for approval. In Supabase: <b>Table Editor → devices</b> → find this code → set <code>approved</code> to <b>true</b>.</p>
-            <p className="code">{me.pair_code}</p>
-          </>
-        )}
+        <section className="section">
+          <h2>This device</h2>
+          {!me && (
+            <div className="row-between">
+              <p className="muted">Not trusted: you&apos;re logged out when the browser closes or after 30 minutes idle.</p>
+              <button className="btn small" onClick={trustThisDevice}>Trust this device</button>
+            </div>
+          )}
+          {me && me.approved && <p><b>{me.name}</b> is trusted. You stay logged in here.</p>}
+          {me && !me.approved && (
+            <>
+              <p className="muted">Waiting for approval. In Supabase: <b>Table Editor → devices</b> → find this code → set <code>approved</code> to <b>true</b>.</p>
+              <p className="code">{me.pair_code}</p>
+            </>
+          )}
+        </section>
+
+        <section className="section">
+          <h2>Devices</h2>
+          {!devices.length && <p className="muted">No devices yet.</p>}
+          <ul className="list">
+            {devices.map((d) => (
+              <li key={d.id}>
+                <span className="list-main">
+                  {d.name} {d.id === currentId && <span className="muted small">· this device</span>}
+                  <span className="muted small block">{d.approved ? "Trusted" : `Pending · ${d.pair_code}`} · last seen {fmt(d.last_seen_at)}</span>
+                </span>
+                <button className="text-btn" onClick={() => rename(d)}>Rename</button>
+                <button className="text-btn danger" onClick={() => remove(d)}>Remove</button>
+              </li>
+            ))}
+          </ul>
+        </section>
+
+        <section className="section">
+          <h2>Face ID</h2>
+          <p className="muted small">The passkey on your iPhone is what approves every login.</p>
+          <ul className="list">
+            {passkeys.map((p) => (
+              <li key={p.id}>
+                <span className="list-main">{p.friendly_name || "Passkey"} <span className="muted small">· added {fmt(p.created_at)}</span></span>
+                <button className="text-btn danger" onClick={() => removePasskey(p.id)}>Remove</button>
+              </li>
+            ))}
+          </ul>
+          <button className="btn small secondary" onClick={addPasskey}>Add a passkey on this device</button>
+        </section>
+
+        <section className="section">
+          <h2>Safety</h2>
+          <div className="row-between">
+            <p className="muted">End every login on every device.</p>
+            <button className="btn small danger" onClick={logoutEverywhere}>Log out everywhere</button>
+          </div>
+        </section>
       </div>
-
-      <div className="card">
-        <h2>Trusted devices</h2>
-        {!devices.length && <p className="muted">No devices yet.</p>}
-        <ul className="entry-list" style={{ margin: 0 }}>
-          {devices.map((d) => (
-            <li key={d.id} style={{ padding: "12px 4px" }}>
-              <div className="row" style={{ justifyContent: "space-between" }}>
-                <div>
-                  <b>{d.name}</b> {d.id === currentId && <span className="badge">this device</span>}{" "}
-                  <span className={`badge ${d.approved ? "public" : ""}`}>{d.approved ? "Trusted" : `Pending · ${d.pair_code}`}</span>
-                  <div className="muted small">Last seen {fmt(d.last_seen_at)}</div>
-                </div>
-                <div className="row">
-                  <button className="btn small secondary" onClick={() => rename(d)}>Rename</button>
-                  <button className="btn small danger" onClick={() => remove(d)}>Remove</button>
-                </div>
-              </div>
-            </li>
-          ))}
-        </ul>
-      </div>
-
-      <div className="card">
-        <h2>Passkeys</h2>
-        <p className="muted small">Passkeys let you log in with Face ID / Touch ID, or by scanning a QR code with your iPhone.</p>
-        <ul className="entry-list" style={{ margin: "8px 0 16px" }}>
-          {passkeys.map((p) => (
-            <li key={p.id} style={{ padding: "10px 4px" }}>
-              <div className="row" style={{ justifyContent: "space-between" }}>
-                <span>{p.friendly_name || "Passkey"} <span className="muted small">added {fmt(p.created_at)}</span></span>
-                <button className="btn small danger" onClick={() => removePasskey(p.id)}>Remove</button>
-              </div>
-            </li>
-          ))}
-        </ul>
-        <button className="btn" onClick={addPasskey}>Add a passkey</button>
-      </div>
-
-
-      <div className="card">
-        <h2>Safety</h2>
-        <p className="muted small">Forgot to log out somewhere? This ends every login on every device.</p>
-        <button className="btn danger" onClick={logoutEverywhere}>Log out everywhere</button>
-      </div>
-    </div>
+    </>
   );
 }

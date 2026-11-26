@@ -11,7 +11,6 @@ function db() {
 export type PublicNote = {
   id: string;
   title: string;
-  type: "note" | "post";
   slug: string;
   content: unknown[];
   markdown: string;
@@ -19,23 +18,18 @@ export type PublicNote = {
   updated_at: string;
 };
 
-const LIST = "id,title,type,slug,markdown,published_at,updated_at";
-
-export async function listPublic(type?: "note" | "post", limit = 50) {
-  let q = db().from("notes").select(LIST).eq("is_public", true).order("published_at", { ascending: false }).limit(limit);
-  if (type) q = q.eq("type", type);
-  const { data } = await q;
+export async function listPublic(limit = 100) {
+  const { data } = await db()
+    .from("notes")
+    .select("id,title,slug,markdown,published_at,updated_at")
+    .eq("is_public", true)
+    .order("published_at", { ascending: false })
+    .limit(limit);
   return (data ?? []) as Omit<PublicNote, "content">[];
 }
 
-export async function getPublic(type: "note" | "post", slug: string) {
-  const { data } = await db()
-    .from("notes")
-    .select("*")
-    .eq("is_public", true)
-    .eq("type", type)
-    .eq("slug", slug)
-    .maybeSingle();
+export async function getPublic(slug: string) {
+  const { data } = await db().from("notes").select("*").eq("is_public", true).eq("slug", slug).maybeSingle();
   return data as PublicNote | null;
 }
 

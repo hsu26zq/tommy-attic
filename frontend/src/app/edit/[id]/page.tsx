@@ -1,141 +1,132 @@
 "use client";
-import { use, useCallback, useEffect, useRef, useState } from "react";
+import { use, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { api, type Note } from "@/lib/api";
-import { EditorClient } from "@/components/ClientOnly";
+import { api } from "@/lib/api";
 import { notesChanged } from "@/lib/notesEvents";
+import NoteEditor, { SyncDot, type NoteCtx } from "@/components/NoteEditor";
+import { Topbar } from "@/components/workspace/Workspace";
+import MoveDialog from "@/components/workspace/MoveDialog";
+import HistoryPanel from "@/components/workspace/HistoryPanel";
 
-type Pending = Partial<Pick<Note, "title" | "type" | "is_public" | "content" | "markdown">>;
+type LinkedNote = { id: string; title: string; icon: string | null };
 
-export default function EditNote({ params }: { params: Promise<{ id: string }> }) {
-  const { id } = use(params);
-  const router = useRouter();
-  const [note, setNote] = useState<Note | null>(null);
-  const [state, setState] = useState<"saved" | "saving" | "unsaved" | "error">("saved");
-  const [conflict, setConflict] = useState(false);
-  const [loadError, setLoadError] = useState("");
-  const pending = useRef<Pending>({});
-  const base = useRef<string>("");
-  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const saving = useRef(false);
-
+function Backlinks({ id }: { id: string }) {
+  const [links, setLinks] = useState<LinkedNote[]>([]);
   useEffect(() => {
-    setNote(null);
-    api<Note>(`/notes/${id}`)
-      .then((n) => {
-        base.current = n.updated_at;
-        setNote(n);
-      })
-      .catch((e) => setLoadError((e as Error).message));
+    api<LinkedNote[]>(`/notes/${id}/backlinks`).then(setLinks).catch(() => {});
   }, [id]);
+  if (!links.length) return null;
+  return (
+    <div className="backlinks">
+      <div className="backlinks-title">Linked from</div>
+      {links.map((l) => (
+        <Link key={l.id} href={`/edit/${l.id}`} className="backlink">
+          {l.icon || "📄"} {l.title || "Untitled"}
+        </Link>
+      ))}
+    </div>
+  );
+}
 
-  const flush = useCallback(async () => {
-    if (saving.current || conflict) return;
-    const changes = pending.current;
-    if (!Object.keys(changes).length) return;
-    pending.current = {};
-    saving.current = true;
-    setState("saving");
-    try {
-      const saved = await api<Note>(`/notes/${id}`, {
-        method: "PATCH",
-        // Live sync merges edits between devices, so no "changed elsewhere" check is needed.
-        body: JSON.stringify(changes),
-      });
-      base.current = saved.updated_at;
-      setNote((n) => (n ? { ...n, ...saved } : n));
-      setState(Object.keys(pending.current).length ? "unsaved" : "saved");
-      if ("title" in changes || "is_public" in changes || "type" in changes) notesChanged();
-    } catch (e) {
-      if ((e as { status?: number }).status === 409) setConflict(true);
-      pending.current = { ...changes, ...pending.current };
-      setState("error");
-    } finally {
-      saving.current = false;
-      if (Object.keys(pending.current).length && !conflict) schedule();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [id, conflict]);
+function PageBar({ ctx, onMove, onHistory }: { ctx: NoteCtx; onMove: () => void; onHistory: () => void }) {
+  const router = useRouter();
+  const { note, change, sync, save } = ctx;
+  const [share, setShare] = useState(false);
+  const [menu, setMenu] = useState(false);
+  const publicUrl = note.is_public && note.slug ? `${typeof window !== "undefined" ? window.location.origin : ""}/notes/${note.slug}` : "";
 
-  function schedule() {
-    if (timer.current) clearTimeout(timer.current);
-    timer.current = setTimeout(flush, 800);
-  }
-
-  function change(p: Pending) {
-    pending.current = { ...pending.current, ...p };
-    setState("unsaved");
-    schedule();
-  }
-
-  // Save before leaving the page
-  useEffect(() => {
-    const warn = (e: BeforeUnloadEvent) => {
-      if (Object.keys(pending.current).length) e.preventDefault();
-    };
-    window.addEventListener("beforeunload", warn);
-    return () => {
-      window.removeEventListener("beforeunload", warn);
-      flush();
-    };
-  }, [flush]);
-
-  async function remove() {
-    if (!confirm("Delete this note? This can't be undone.")) return;
-    pending.current = {};
-    await api(`/notes/${id}`, { method: "DELETE" });
+  async function trash() {
+    await api(`/notes/${note.id}`, { method: "DELETE" });
     notesChanged();
     router.replace("/edit");
   }
 
-  if (loadError) return <div className="notice">{loadError}</div>;
-  if (!note) return <p className="muted">Loading…</p>;
+  return (
+    <Topbar
+      crumbs={
+        <>
+          {note.path.map((p) => (
+            <span key={p.id} className="crumb">
+              <Link href={`/edit/${p.id}`}>{p.icon ? `${p.icon} ` : ""}{p.title || "Untitled"}</Link>
+              <span className="crumb-sep">/</span>
+            </span>
+          ))}
+          <span className="crumb current">{note.icon ? `${note.icon} ` : ""}{note.title || "Untitled"}</span>
+        </>
+      }
+    >
+      <SyncDot sync={sync} save={save} />
+      <div className="pop-wrap">
+        <button className="text-btn" onClick={() => { setShare(!share); setMenu(false); }}>{note.is_public ? "Public" : "Share"}</button>
+        {share && (
+          <div className="pop" onMouseLeave={() => setShare(false)}>
+            <label className="switch-row">
+              <span>
+                <b>Publish to web</b>
+                <span className="muted small">Anyone with the link can read it</span>
+              </span>
+              <input type="checkbox" checked={note.is_public} onChange={(e) => change({ is_public: e.target.checked })} />
+            </label>
+            {publicUrl && (
+              <div className="row">
+                <input readOnly value={publicUrl} onFocus={(e) => e.target.select()} />
+                <button className="btn small" onClick={() => navigator.clipboard.writeText(publicUrl)}>Copy</button>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+      <div className="pop-wrap">
+        <button className="icon-btn" onClick={() => { setMenu(!menu); setShare(false); }} aria-label="More">⋯</button>
+        {menu && (
+          <div className="pop menu" onMouseLeave={() => setMenu(false)}>
+            <button onClick={() => { setMenu(false); onHistory(); }}>Version history</button>
+            <button onClick={() => { setMenu(false); onMove(); }}>Move to</button>
+            <button className="danger" onClick={trash}>Move to trash</button>
+          </div>
+        )}
+      </div>
+    </Topbar>
+  );
+}
 
-  const publicUrl = note.is_public && note.slug ? `/${note.type === "post" ? "blog" : "notes"}/${note.slug}` : null;
-  const label = { saved: "Saved", saving: "Saving…", unsaved: "Unsaved", error: "Not saved" }[state];
+export default function NotePage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = use(params);
+  const [moving, setMoving] = useState(false);
+  const [history, setHistory] = useState(false);
+  const [rev, setRev] = useState(0);
 
   return (
-    <div className="doc">
-      <div className="doc-toolbar">
-        <div className="row">
-          <div className="toggle" title="Note or blog post">
-            <button className={note.type === "note" ? "on" : ""} onClick={() => { setNote({ ...note, type: "note" }); change({ type: "note" }); }}>Note</button>
-            <button className={note.type === "post" ? "on" : ""} onClick={() => { setNote({ ...note, type: "post" }); change({ type: "post" }); }}>Post</button>
-          </div>
-          <div className="toggle" title="Who can see it">
-            <button className={!note.is_public ? "on" : ""} onClick={() => { setNote({ ...note, is_public: false }); change({ is_public: false }); }}>Private</button>
-            <button className={note.is_public ? "on" : ""} onClick={() => { setNote({ ...note, is_public: true }); change({ is_public: true }); }}>Public</button>
-          </div>
-          {publicUrl && <Link href={publicUrl} target="_blank" className="small">View public page ↗</Link>}
-        </div>
-        <div className="row">
-          <span className="save-state">{label}</span>
-          <button className="btn small danger" onClick={remove}>Delete</button>
-        </div>
-      </div>
-
-      {conflict && (
-        <div className="notice">
-          This note was changed on another device. <button className="btn small secondary" onClick={() => window.location.reload()}>Reload</button>
-        </div>
+    <NoteEditor
+      key={`${id}-${rev}`}
+      id={id}
+      header={(ctx) => (
+        <>
+          <PageBar ctx={ctx} onMove={() => setMoving(true)} onHistory={() => setHistory(true)} />
+          {moving && (
+            <MoveDialog
+              noteId={id}
+              onClose={() => {
+                setMoving(false);
+                setRev((r) => r + 1); // reload breadcrumbs
+              }}
+            />
+          )}
+          {history && (
+            <HistoryPanel
+              noteId={id}
+              onClose={() => setHistory(false)}
+              onRestore={(v) => {
+                ctx.handle.current?.replaceContent(v.content);
+                ctx.change({ title: v.title });
+                setHistory(false);
+              }}
+            />
+          )}
+        </>
       )}
-
-      <input
-        className="title-input"
-        value={note.title}
-        placeholder="Untitled"
-        onChange={(e) => {
-          setNote({ ...note, title: e.target.value });
-          change({ title: e.target.value });
-        }}
-      />
-      <EditorClient
-        key={note.id}
-        noteId={note.id}
-        initialContent={note.content}
-        onChange={(content, markdown) => change({ content, markdown })}
-      />
-    </div>
+      after={() => <Backlinks id={id} />}
+    />
   );
 }

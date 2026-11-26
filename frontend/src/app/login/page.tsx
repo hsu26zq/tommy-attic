@@ -68,8 +68,8 @@ export default function LoginPage() {
   useEffect(() => setIsPhone(/iPhone|iPad|Android/.test(navigator.userAgent) || (navigator.maxTouchPoints > 1 && /Macintosh/.test(navigator.userAgent))), []);
 
   return (
-    <div className="container">
-      <div className="login-box card" style={{ textAlign: "center" }}>
+    <div className="auth-wrap">
+      <div className="auth-box" style={{ textAlign: "center" }}>
         <h1 style={{ marginTop: 0 }}>Log in</h1>
         {idle && <div className="notice">You were logged out after 30 minutes without activity.</div>}
         {isPhone ? (

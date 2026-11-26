@@ -8,28 +8,38 @@ import { HocuspocusProvider } from "@hocuspocus/provider";
 import { combineByGroup, filterSuggestionItems, insertOrUpdateBlockForSlashMenu } from "@blocknote/core";
 import { CollaborationExtension } from "@blocknote/core/yjs";
 import { BlockNoteView } from "@blocknote/mantine";
-import { SuggestionMenuController, getDefaultReactSlashMenuItems, useCreateBlockNote } from "@blocknote/react";
+import {
+  SuggestionMenuController,
+  getDefaultReactSlashMenuItems,
+  useCreateBlockNote,
+  type DefaultReactSuggestionItem,
+} from "@blocknote/react";
 import { getMultiColumnSlashMenuItems } from "@blocknote/xl-multi-column";
-import { editableOptions } from "./editorSetup";
+import { baseExtensions, editableOptions } from "./editorSetup";
 import { isTrustedHere, supabase } from "@/lib/supabase";
+import { api, type Database, type NoteSummary } from "@/lib/api";
+
+export type SyncStatus = "connecting" | "synced" | "offline";
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export type EditorHandle = { replaceContent: (blocks: unknown[]) => void; editor: any };
 
 type Props = {
   noteId: string;
   initialContent: unknown[];
   onChange: (content: unknown[], markdown: string) => void;
+  onStatus?: (s: SyncStatus) => void;
+  onReady?: (h: EditorHandle) => void;
 };
 
-export type SyncStatus = "connecting" | "synced" | "offline";
-
 const COLLAB_URL = process.env.NEXT_PUBLIC_COLLAB_URL ?? "ws://localhost:8080";
-const COLORS = ["#b5552b", "#2f5fb3", "#3f7a4a", "#8a4fb3", "#c28a1d"];
+const COLORS = ["#2f6fde", "#d9730d", "#0f7b6c", "#9065b0", "#c14c8a"];
 
 function deviceLabel() {
   const ua = navigator.userAgent;
-  return /iPhone/.test(ua) ? "iPhone" : /iPad|Macintosh.*Mobile/.test(ua) ? "iPad" : /Mac/.test(ua) ? "Mac" : /Android/.test(ua) ? "Android" : "Computer";
+  return /iPhone/.test(ua) ? "iPhone" : /iPad/.test(ua) ? "iPad" : /Mac/.test(ua) ? "Mac" : /Android/.test(ua) ? "Android" : "Computer";
 }
 
-// One shared document per note. Your devices edit the same copy live; changes merge automatically.
+// One shared document per note: your devices edit the same copy live and changes merge.
 // Trusted devices also keep an offline copy, so you can keep writing without internet.
 function useSyncedDoc(noteId: string) {
   const [setup] = useState(() => {
@@ -54,18 +64,18 @@ function useSyncedDoc(noteId: string) {
   return setup;
 }
 
-export default function Editor({ noteId, initialContent, onChange }: Props) {
+export default function Editor({ noteId, initialContent, onChange, onStatus, onReady }: Props) {
   const { doc, provider, local } = useSyncedDoc(noteId);
-  const [status, setStatus] = useState<SyncStatus>("connecting");
   const [ready, setReady] = useState(false);
   const seeded = useRef(false);
 
   const editor = useCreateBlockNote({
     ...editableOptions,
     extensions: [
+      ...baseExtensions,
       CollaborationExtension({
         fragment: doc.getXmlFragment("document-store"),
-        user: { name: `Tommy · ${typeof navigator !== "undefined" ? deviceLabel() : ""}`, color: COLORS[Math.floor(Math.random() * COLORS.length)] },
+        user: { name: typeof navigator !== "undefined" ? deviceLabel() : "", color: COLORS[Math.floor(Math.random() * COLORS.length)] },
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         provider: { awareness: (provider.awareness ?? undefined) as any },
       }),
@@ -73,12 +83,19 @@ export default function Editor({ noteId, initialContent, onChange }: Props) {
   });
 
   useEffect(() => {
-    // The first time a note is opened with sync, fill the shared document from the saved copy.
+    onReady?.({
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      replaceContent: (blocks) => editor.replaceBlocks(editor.document, (blocks.length ? blocks : [{ type: "paragraph" }]) as any),
+      editor,
+    });
+  }, [editor, onReady]);
+
+  useEffect(() => {
+    // First open with sync: fill the shared document from the saved copy.
     const seed = () => {
       if (seeded.current) return;
       seeded.current = true;
-      const fragment = doc.getXmlFragment("document-store");
-      if (fragment.length === 0 && initialContent.length) {
+      if (doc.getXmlFragment("document-store").length === 0 && initialContent.length) {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         editor.replaceBlocks(editor.document, initialContent as any);
       }
@@ -86,18 +103,17 @@ export default function Editor({ noteId, initialContent, onChange }: Props) {
     };
     const onSynced = ({ state }: { state: boolean }) => {
       if (state) {
-        setStatus("synced");
+        onStatus?.("synced");
         seed();
       }
     };
-    const onStatus = ({ status: s }: { status: string }) => {
-      if (s === "disconnected") setStatus("offline");
-      else if (s === "connecting") setStatus((cur) => (cur === "synced" ? "offline" : "connecting"));
+    const onConn = ({ status }: { status: string }) => {
+      if (status === "disconnected") onStatus?.("offline");
+      else if (status === "connecting") onStatus?.("connecting");
     };
     provider.on("synced", onSynced);
-    provider.on("status", onStatus);
+    provider.on("status", onConn);
     if (provider.isSynced) onSynced({ state: true });
-    // Trusted devices can start right away from their offline copy.
     local?.whenSynced.then(() => {
       if (doc.getXmlFragment("document-store").length > 0) {
         seeded.current = true;
@@ -106,20 +122,65 @@ export default function Editor({ noteId, initialContent, onChange }: Props) {
     });
     return () => {
       provider.off("synced", onSynced);
-      provider.off("status", onStatus);
+      provider.off("status", onConn);
     };
-  }, [provider, local, doc, editor, initialContent]);
+  }, [provider, local, doc, editor, initialContent, onStatus]);
 
-  const label = { connecting: "Connecting…", synced: "Live", offline: local ? "Offline (saved on this device)" : "Offline" }[status];
+  const extraSlashItems: DefaultReactSuggestionItem[] = [
+    {
+      title: "Database",
+      subtext: "A table where every row is its own page",
+      aliases: ["database", "table view", "db", "list"],
+      group: "Advanced",
+      icon: <span className="slash-icon">▦</span>,
+      onItemClick: async () => {
+        const db = await api<Database>("/databases", { method: "POST", body: JSON.stringify({ note_id: noteId }) });
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        insertOrUpdateBlockForSlashMenu(editor, { type: "database", props: { databaseId: db.id } } as any);
+      },
+    },
+    {
+      title: "Drawing",
+      subtext: "Draw or handwrite with Apple Pencil, pen or mouse",
+      aliases: ["draw", "pencil", "sketch", "handwriting", "ink"],
+      group: "Media",
+      icon: <span className="slash-icon">✎</span>,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      onItemClick: () => insertOrUpdateBlockForSlashMenu(editor, { type: "drawing" } as any),
+    },
+    {
+      title: "PDF",
+      subtext: "Read a PDF inside the note",
+      aliases: ["pdf", "document", "reader"],
+      group: "Media",
+      icon: <span className="slash-icon">⎙</span>,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      onItemClick: () => insertOrUpdateBlockForSlashMenu(editor, { type: "pdf" } as any),
+    },
+  ];
+
+  // "@" links to another note
+  async function noteLinkItems(query: string): Promise<DefaultReactSuggestionItem[]> {
+    const list = await api<NoteSummary[]>("/notes").catch(() => [] as NoteSummary[]);
+    const q = query.toLowerCase();
+    return list
+      .filter((n) => n.id !== noteId && (n.title || "Untitled").toLowerCase().includes(q))
+      .slice(0, 10)
+      .map((n) => ({
+        title: n.title || "Untitled",
+        icon: <span className="slash-icon">{n.icon || "↗"}</span>,
+        onItemClick: () =>
+          editor.insertInlineContent([
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            { type: "noteLink", props: { noteId: n.id, title: n.title || "Untitled" } } as any,
+            " ",
+          ]),
+      }));
+  }
 
   return (
     <>
-      <div className={`sync-pill ${status}`} title="Live sync between your devices">
-        <span className="dot" /> {label}
-      </div>
-      {!ready && (
-        <p className="muted small">Connecting to the sync server… (up to a minute if it was asleep)</p>
-      )}
+      {!ready && <p className="muted small">Connecting… (up to a minute if the server was asleep)</p>}
       <div style={{ display: ready ? "block" : "none" }}>
         <BlockNoteView
           editor={editor}
@@ -134,30 +195,12 @@ export default function Editor({ noteId, initialContent, onChange }: Props) {
             triggerCharacter="/"
             getItems={async (query) =>
               filterSuggestionItems(
-                combineByGroup(getDefaultReactSlashMenuItems(editor), getMultiColumnSlashMenuItems(editor), [
-                  {
-                    title: "Drawing",
-                    subtext: "Draw or handwrite with Apple Pencil, pen or mouse",
-                    aliases: ["draw", "pencil", "sketch", "handwriting", "ink"],
-                    group: "Media",
-                    icon: <span style={{ fontSize: 18 }}>✍️</span>,
-                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                    onItemClick: () => insertOrUpdateBlockForSlashMenu(editor, { type: "drawing" } as any),
-                  },
-                  {
-                    title: "PDF",
-                    subtext: "Read a PDF right inside the note",
-                    aliases: ["pdf", "document", "reader"],
-                    group: "Media",
-                    icon: <span style={{ fontSize: 18 }}>📄</span>,
-                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                    onItemClick: () => insertOrUpdateBlockForSlashMenu(editor, { type: "pdf" } as any),
-                  },
-                ] as ReturnType<typeof getDefaultReactSlashMenuItems>),
+                combineByGroup(getDefaultReactSlashMenuItems(editor), getMultiColumnSlashMenuItems(editor), extraSlashItems),
                 query,
               )
             }
           />
+          <SuggestionMenuController triggerCharacter="@" getItems={noteLinkItems} />
         </BlockNoteView>
       </div>
     </>

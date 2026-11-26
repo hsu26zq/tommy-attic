@@ -1,12 +1,24 @@
+"use client";
+import { useRouter } from "next/navigation";
+import { api, type NoteSummary } from "@/lib/api";
+import { notesChanged } from "@/lib/notesEvents";
+import { Topbar } from "@/components/workspace/Workspace";
+
 export default function EditHome() {
+  const router = useRouter();
+  async function create() {
+    const note = await api<NoteSummary>("/notes", { method: "POST", body: "{}" });
+    notesChanged();
+    router.push(`/edit/${note.id}`);
+  }
   return (
-    <div style={{ padding: "40px 0" }}>
-      <h1 style={{ marginTop: 0 }}>Your attic</h1>
-      <p className="muted">Pick a note on the left, or create a new note or blog post.</p>
-      <p className="muted small">
-        Tips: type <code>/</code> for headings, tables, code, images and columns. Drag files straight into a note.
-        Everything saves automatically.
-      </p>
-    </div>
+    <>
+      <Topbar />
+      <div className="empty-state">
+        <p>Pick a page, or start a new one.</p>
+        <button className="btn" onClick={create}>New page</button>
+        <p className="muted small">Type <kbd>/</kbd> for blocks · <kbd>@</kbd> to link a note · <kbd>⌘K</kbd> to search</p>
+      </div>
+    </>
   );
 }
