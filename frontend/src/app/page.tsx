@@ -9,7 +9,7 @@ export default async function Home() {
   return (
     <div className="container">
       <section className="hero">
-        <h1>Welcome to the attic.</h1>
+        <h1>Welcome.</h1>
         <p>I&apos;m Tommy. This is where I keep my notes, write things down, and share what I&apos;m learning.</p>
         <div className="row" style={{ marginTop: 20 }}>
           <Link href="/blog" className="btn">Read the blog</Link>

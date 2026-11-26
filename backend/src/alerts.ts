@@ -13,7 +13,7 @@ export async function sendLoginAlert(info: { method: string; trusted: boolean; d
     body: JSON.stringify({
       from: env.alertFrom,
       to: [env.alertEmail],
-      subject: info.trusted ? `Login to Tommy's Attic · ${info.device ?? "trusted device"}` : "New login to Tommy's Attic · untrusted device",
+      subject: info.trusted ? `New login · ${info.device ?? "trusted device"}` : "New login · untrusted device",
       text:
         `Someone logged in to your site.\n\n` +
         `When: ${when}\nDevice: ${info.trusted ? `${info.device} (trusted)` : "not trusted"}\nMethod: ${info.method}\nBrowser: ${info.userAgent}\nIP: ${info.ip}\n\n` +

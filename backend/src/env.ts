@@ -14,7 +14,7 @@ export const env = {
   // Optional: login alert emails through Resend
   resendKey: process.env.RESEND_API_KEY ?? "",
   alertEmail: process.env.ALERT_EMAIL ?? "",
-  alertFrom: process.env.ALERT_FROM ?? "Tommy's Attic <onboarding@resend.dev>",
+  alertFrom: process.env.ALERT_FROM ?? "Login alert <onboarding@resend.dev>",
   // Cookies are only marked Secure in production (https)
   secureCookies: process.env.NODE_ENV !== "development",
 };

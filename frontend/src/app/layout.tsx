@@ -3,8 +3,8 @@ import "@mantine/core/styles.css";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: { default: "Tommy's Attic", template: "%s · Tommy's Attic" },
-  description: "Tommy's personal website: blog, notes and things worth keeping.",
+  title: { default: "Notes", template: "%s" },
+  description: "Notes.",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
@@ -12,13 +12,6 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="en">
       <body>
         <main>{children}</main>
-        <footer className="site-footer">
-          <p>© {new Date().getFullYear()} Tommy · Tommy&apos;s Attic</p>
-          <p>
-            Built with Next.js &amp; BlockNote · Hosted on Vercel &amp; Render · Data by Supabase ·{" "}
-            <a href="https://github.com/hsu26zq/tommy-attic">Source on GitHub</a>
-          </p>
-        </footer>
       </body>
     </html>
   );
