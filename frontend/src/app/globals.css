@@ -361,6 +361,10 @@ tr:hover .db-open, tr:hover .db-del { opacity: 1; }
   .tree-add { opacity: 1; }
   .app.side-hidden { --side-w: 0px; }
   .show-side, .hide-side, .side-peek { display: none !important; }
+  /* phones: the text toolbar scrolls sideways instead of running off screen; no + ⋮⋮ handles (no room, no hover) */
+  .bn-formatting-toolbar { max-width: calc(100vw - 32px); overflow-x: auto; flex-wrap: nowrap !important; scrollbar-width: none; }
+  .bn-formatting-toolbar::-webkit-scrollbar { display: none; }
+  .bn-side-menu { display: none !important; }
   .page.wide { padding-inline: 20px; }
   .lane { flex-basis: 78vw; }
   .cal-day { min-height: 64px; }
