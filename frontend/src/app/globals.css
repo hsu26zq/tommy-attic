@@ -593,3 +593,8 @@ td:hover .cell-input[type="date"] { color: inherit; }
 .contents a { color: var(--muted); text-decoration: none; font-size: 14px; line-height: 1.5; padding: 3px 8px; justify-self: start; border-radius: 4px; text-decoration-line: underline; text-decoration-color: var(--line); text-underline-offset: 3px; }
 .contents a:hover { background: var(--hover); color: var(--text); }
 .contents.empty { color: var(--faint); font-size: 14px; padding: 6px 8px; }
+
+/* Dates typed with @ */
+.date-chip { color: var(--accent); font-weight: 500; white-space: nowrap; }
+.date-chip::before { content: "@"; opacity: 0.55; margin-right: 1px; }
+.date-chip.past { color: var(--muted); }

@@ -8,6 +8,7 @@ import { DrawingBlock } from "./DrawingBlock";
 import { CalloutBlock } from "./CalloutBlock";
 import { EmbedBlock } from "./EmbedBlock";
 import { ContentsBlock } from "./ContentsBlock";
+import { DateMention } from "./DateMention";
 import { PdfBlock } from "./PdfBlock";
 import { DatabaseBlock } from "./database/DatabaseBlock";
 import { NoteLink } from "./NoteLink";
@@ -26,7 +27,7 @@ export const schema = withMultiColumn(
       database: DatabaseBlock(),
       pdf: PdfBlock(),
     },
-    inlineContentSpecs: { ...defaultInlineContentSpecs, noteLink: NoteLink },
+    inlineContentSpecs: { ...defaultInlineContentSpecs, noteLink: NoteLink, date: DateMention },
   }),
 );
 

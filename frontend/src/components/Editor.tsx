@@ -32,6 +32,8 @@ import { isTrustedHere, supabase } from "@/lib/supabase";
 import { api, type Database, type NoteSummary } from "@/lib/api";
 import { notesChanged } from "@/lib/notesEvents";
 import BlockSelect from "./BlockSelect";
+import { dateGuesses } from "./DateMention";
+import { useWorkspace } from "./workspace/Workspace";
 import { useRouter } from "next/navigation";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -147,6 +149,7 @@ export default function Editor(props: Props) {
 
 function LiveEditor({ noteId, onChange, onReady, doc, provider }: Props & { doc: Y.Doc; provider: HocuspocusProvider }) {
   const router = useRouter();
+  const { notes: workspaceNotes } = useWorkspace();
 
   const editor = useCreateBlockNote({
     ...editableOptions,
@@ -275,10 +278,23 @@ function LiveEditor({ noteId, onChange, onReady, doc, provider }: Props & { doc:
   ];
 
   // "@" links to another note
+  // "@": dates first when the words look like one (@today, @fri, @dec 3), then pages to link
   async function noteLinkItems(query: string): Promise<DefaultReactSuggestionItem[]> {
-    const list = await api<NoteSummary[]>("/notes").catch(() => [] as NoteSummary[]);
+    const dates: DefaultReactSuggestionItem[] = dateGuesses(query).map((d) => ({
+      title: d.label,
+      subtext: d.iso,
+      group: "Date",
+      icon: <span className="slash-icon">◷</span>,
+      onItemClick: () =>
+        editor.insertInlineContent([
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          { type: "date", props: { date: d.iso } } as any,
+          " ",
+        ]),
+    }));
+    const list = workspaceNotes ?? (await api<NoteSummary[]>("/notes").catch(() => [] as NoteSummary[]));
     const q = query.toLowerCase();
-    return list
+    const pages: DefaultReactSuggestionItem[] = list
       .filter((n) => n.id !== noteId && (n.title || "Untitled").toLowerCase().includes(q))
       .slice(0, 10)
       .map((n) => ({
@@ -290,7 +306,9 @@ function LiveEditor({ noteId, onChange, onReady, doc, provider }: Props & { doc:
             { type: "noteLink", props: { noteId: n.id, title: n.title || "Untitled" } } as any,
             " ",
           ]),
+        group: "Pages",
       }));
+    return [...dates, ...pages];
   }
 
   return (
