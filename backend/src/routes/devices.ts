@@ -40,23 +40,21 @@ devices.get("/me", async (c) => {
 });
 
 // "Trust this device": creates a pending device with a pair code.
-// The very first device ever is approved automatically.
+// Approval happens only by hand in the Supabase dashboard (devices table → approved = true).
 devices.post("/register", async (c) => {
   const existing = await currentDevice(c, c.var.db);
   if (existing) return c.json({ device: existing });
 
   const body = await c.req.json().catch(() => ({}));
-  const { count } = await c.var.db.from("devices").select("id", { count: "exact", head: true }).eq("approved", true);
   const token = randomBytes(32).toString("base64url");
-  const firstDevice = (count ?? 0) === 0;
 
   const { data, error } = await c.var.db
     .from("devices")
     .insert({
       name: String(body.name ?? "Unnamed device").slice(0, 80),
       token_hash: hash(token),
-      pair_code: firstDevice ? null : pairCode(),
-      approved: firstDevice,
+      pair_code: pairCode(),
+      approved: false,
       user_agent: (c.req.header("User-Agent") ?? "").slice(0, 300),
     })
     .select(FIELDS)
@@ -80,19 +78,6 @@ devices.get("/", async (c) => {
   return c.json({ devices: data, currentId: me?.id ?? null });
 });
 
-// Approve another device — only allowed from a device that is already trusted.
-devices.post("/:id/approve", async (c) => {
-  const me = await currentDevice(c, c.var.db);
-  if (!me?.approved) throw new HTTPException(403, { message: "Approve from a trusted device" });
-  const { data, error } = await c.var.db
-    .from("devices")
-    .update({ approved: true, pair_code: null })
-    .eq("id", c.req.param("id"))
-    .select(FIELDS)
-    .single();
-  if (error) throw new HTTPException(500, { message: error.message });
-  return c.json({ device: data });
-});
 
 devices.patch("/:id", async (c) => {
   const body = await c.req.json();

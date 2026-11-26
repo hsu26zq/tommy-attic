@@ -27,7 +27,6 @@ export default function Settings() {
   const [passkeys, setPasskeys] = useState<{ id: string; friendly_name?: string; created_at?: string }[]>([]);
   const [msg, setMsg] = useState("");
   const [err, setErr] = useState("");
-  const [newPassword, setNewPassword] = useState("");
 
   const load = useCallback(async () => {
     try {
@@ -90,14 +89,6 @@ export default function Settings() {
     }
   }
 
-  async function approve(id: string) {
-    try {
-      await api(`/devices/${id}/approve`, { method: "POST" });
-      load();
-    } catch (e) {
-      setErr((e as Error).message);
-    }
-  }
 
   async function rename(d: Device) {
     const name = prompt("Device name", d.name);
@@ -113,17 +104,6 @@ export default function Settings() {
     load();
   }
 
-  async function savePassword(e: React.FormEvent) {
-    e.preventDefault();
-    setErr("");
-    setMsg("");
-    const { error } = await supabase().auth.updateUser({ password: newPassword });
-    if (error) setErr(error.message);
-    else {
-      setNewPassword("");
-      setMsg("Password saved. You can now log in with your email + password.");
-    }
-  }
 
   async function logoutEverywhere() {
     if (!confirm("Log out on every device, including this one?")) return;
@@ -151,7 +131,7 @@ export default function Settings() {
         {me && me.approved && <p>✅ <b>{me.name}</b> is trusted. You stay logged in here.</p>}
         {me && !me.approved && (
           <>
-            <p>Waiting for approval. Approve it from a trusted device below, or in Supabase (Table Editor → devices → set <code>approved</code> to true). Code:</p>
+            <p>Waiting for approval. In Supabase: <b>Table Editor → devices</b> → find this code → set <code>approved</code> to <b>true</b>.</p>
             <p className="code">{me.pair_code}</p>
           </>
         )}
@@ -170,7 +150,6 @@ export default function Settings() {
                   <div className="muted small">Last seen {fmt(d.last_seen_at)}</div>
                 </div>
                 <div className="row">
-                  {!d.approved && me?.approved && <button className="btn small" onClick={() => approve(d.id)}>Approve</button>}
                   <button className="btn small secondary" onClick={() => rename(d)}>Rename</button>
                   <button className="btn small danger" onClick={() => remove(d)}>Remove</button>
                 </div>
@@ -196,23 +175,6 @@ export default function Settings() {
         <button className="btn" onClick={addPasskey}>Add a passkey</button>
       </div>
 
-      <div className="card">
-        <h2>Password</h2>
-        <p className="muted small">Set a password to log in on computers where the passkey QR code doesn&apos;t work. Use at least 12 characters.</p>
-        <form onSubmit={savePassword} className="row">
-          <input
-            type="password"
-            placeholder="New password"
-            value={newPassword}
-            onChange={(e) => setNewPassword(e.target.value)}
-            minLength={12}
-            required
-            autoComplete="new-password"
-            style={{ font: "inherit", padding: "10px 12px", border: "1px solid var(--line)", borderRadius: 10, flex: 1, minWidth: 0 }}
-          />
-          <button className="btn">Save password</button>
-        </form>
-      </div>
 
       <div className="card">
         <h2>Safety</h2>
