@@ -30,6 +30,8 @@ import { getMultiColumnSlashMenuItems } from "@blocknote/xl-multi-column";
 import { baseExtensions, editableOptions, editorOptions } from "./editorSetup";
 import { isTrustedHere, supabase } from "@/lib/supabase";
 import { api, type Database, type NoteSummary } from "@/lib/api";
+import { notesChanged } from "@/lib/notesEvents";
+import { useRouter } from "next/navigation";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type EditorHandle = { replaceContent: (blocks: unknown[]) => void; editor: any };
@@ -142,6 +144,7 @@ export default function Editor(props: Props) {
 }
 
 function LiveEditor({ noteId, onChange, onReady, doc, provider }: Props & { doc: Y.Doc; provider: HocuspocusProvider }) {
+  const router = useRouter();
 
   const editor = useCreateBlockNote({
     ...editableOptions,
@@ -192,6 +195,24 @@ function LiveEditor({ noteId, onChange, onReady, doc, provider }: Props & { doc:
   }, []);
 
   const extraSlashItems: DefaultReactSuggestionItem[] = [
+    {
+      title: "Page",
+      subtext: "A new page inside this one",
+      aliases: ["page", "subpage", "new page", "child"],
+      group: "Basic blocks",
+      icon: <span className="slash-icon">▢</span>,
+      onItemClick: async () => {
+        const page = await api<NoteSummary>("/notes", { method: "POST", body: JSON.stringify({ parent_id: noteId }) });
+        editor.insertInlineContent([
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          { type: "noteLink", props: { noteId: page.id, title: "Untitled" } } as any,
+          " ",
+        ]);
+        notesChanged();
+        // open it (this page saves itself on the way out)
+        setTimeout(() => router.push(`/edit/${page.id}`), 300);
+      },
+    },
     {
       title: "Callout",
       subtext: "A tinted note with an emoji",
