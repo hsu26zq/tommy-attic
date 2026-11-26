@@ -112,3 +112,16 @@ grant execute on function public.export_notes(text) to anon, authenticated;
 
 -- Live-sync state (Yjs document, base64). The JSON content and markdown stay as the readable copies.
 alter table public.notes add column if not exists ydoc text;
+
+-- QR login: a computer asks, your logged-in iPhone approves with Face ID. Backend-only table.
+create table public.login_requests (
+  id uuid primary key default gen_random_uuid(),
+  poll_hash text not null,
+  status text not null default 'pending' check (status in ('pending','approved','used')),
+  token_hash text,
+  user_agent text,
+  ip text,
+  created_at timestamptz not null default now(),
+  expires_at timestamptz not null default now() + interval '2 minutes'
+);
+alter table public.login_requests enable row level security;

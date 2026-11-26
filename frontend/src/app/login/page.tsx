@@ -4,6 +4,13 @@ import { useRouter } from "next/navigation";
 import * as WebAuthn from "@simplewebauthn/browser";
 import { supabase } from "@/lib/supabase";
 import { afterLogin } from "@/lib/afterLogin";
+import QrLogin from "@/components/QrLogin";
+
+// Where to go after login (only paths on this site)
+function nextPath() {
+  const n = new URLSearchParams(window.location.search).get("next") ?? "";
+  return n.startsWith("/") && !n.startsWith("//") ? n : "/edit";
+}
 
 type PasskeyApi = {
   startAuthentication: () => Promise<{ data: { options: unknown; challenge_id: string } | null; error: Error | null }>;
@@ -20,6 +27,7 @@ export default function LoginPage() {
   const [codeSent, setCodeSent] = useState(false);
   const [code, setCode] = useState("");
   const [password, setPassword] = useState("");
+  const [showQr, setShowQr] = useState(false);
 
   // Coming back from an email login link: the session is picked up from the URL automatically.
   useEffect(() => {
@@ -29,7 +37,7 @@ export default function LoginPage() {
     sb.auth.getSession().then(async ({ data }) => {
       if (data.session) {
         if (fromLink) void afterLogin("email-link");
-        router.replace("/edit");
+        router.replace(nextPath());
       }
     });
   }, [router]);
@@ -48,7 +56,7 @@ export default function LoginPage() {
       if (verifyError) throw verifyError;
       // "platform" = this device's own Face ID / Touch ID; "cross-platform" = phone QR scan or security key
       void afterLogin(credential.authenticatorAttachment ?? "unknown"); // runs in background, no waiting
-      router.replace("/edit");
+      router.replace(nextPath());
     } catch (e) {
       setStatus("");
       setError(e instanceof Error ? e.message : "Passkey login failed");
@@ -84,7 +92,7 @@ export default function LoginPage() {
       return;
     }
     void afterLogin("password");
-    router.replace("/edit");
+    router.replace(nextPath());
   }
 
   // The code from the email can be read on your phone and typed on this computer.
@@ -99,7 +107,7 @@ export default function LoginPage() {
       return;
     }
     void afterLogin("email-code");
-    router.replace("/edit");
+    router.replace(nextPath());
   }
 
   return (
@@ -108,10 +116,16 @@ export default function LoginPage() {
         <h1 style={{ marginTop: 0 }}>Log in</h1>
         {idle && <div className="notice">You were logged out after 30 minutes without activity.</div>}
         <p className="muted small">Only Tommy can log in here.</p>
-        <button className="btn" onClick={passkeyLogin} disabled={busy}>
-          Log in with passkey
+        {showQr ? (
+          <QrLogin onDone={() => router.replace(nextPath())} />
+        ) : (
+          <button className="btn" onClick={() => setShowQr(true)}>
+            Log in with iPhone (scan QR)
+          </button>
+        )}
+        <button className="btn secondary" style={{ marginTop: 8 }} onClick={passkeyLogin} disabled={busy}>
+          Log in with passkey on this device
         </button>
-        <p className="muted small">On someone else&apos;s computer, choose your phone and scan the QR code.</p>
 
         <div className="divider">or use your password</div>
         <form onSubmit={passwordLogin} style={{ display: "grid", gap: 8 }}>
