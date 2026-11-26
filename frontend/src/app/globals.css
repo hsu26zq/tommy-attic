@@ -238,7 +238,10 @@ tr:hover .db-open, tr:hover .db-del { opacity: 1; }
 .tag { background: #f1f0ee; border-radius: 4px; padding: 0 6px; font-size: 13px; }
 
 /* ---------- drawing ---------- */
-.drawing { width: 100%; margin: 0 0 6px; }
+.drawing { width: 100%; margin: 0 0 6px; position: relative; }
+.drawing-resize { height: 12px; margin-top: -6px; position: relative; cursor: ns-resize; touch-action: none; }
+.drawing-resize::after { content: ""; position: absolute; left: 50%; top: 4px; width: 36px; height: 4px; margin-left: -18px; border-radius: 2px; background: var(--line); transition: background 0.15s; }
+.drawing-resize:hover::after, .drawing-resize:active::after { background: var(--faint); }
 /* Toolbars on drawing + PDF blocks: one 30px row so the + ⋮⋮ handles line up with it */
 .drawing-tools, .pdf-tools { display: flex; align-items: center; gap: 2px; height: 30px; padding: 0 6px; box-sizing: border-box; font-size: 12px; color: var(--muted); }
 .drawing-tools { flex-wrap: nowrap; overflow-x: auto; border: 1px solid var(--line); border-bottom: none; border-radius: 8px 8px 0 0; height: 32px; }
@@ -337,3 +340,14 @@ tr:hover .db-open, tr:hover .db-del { opacity: 1; }
 .context-menu button:hover { background: var(--hover); }
 .tree-item { -webkit-touch-callout: none; user-select: none; }
 .save-error { position: fixed; bottom: 16px; left: 50%; transform: translateX(-50%); z-index: 60; background: #fff; color: var(--danger); font-size: 13px; padding: 6px 12px; border-radius: 6px; box-shadow: 0 2px 12px rgba(15, 15, 15, 0.12); }
+
+/* Loading placeholders: faint shapes, only appear if loading takes longer than a moment */
+@keyframes skel-in { from { opacity: 0; } to { opacity: 1; } }
+.skel { background: #f1f1ef; border-radius: 4px; animation: skel-in 0.3s ease 0.3s both; }
+.skel-title { height: 40px; width: 45%; margin: 4px 0 18px; }
+.skel-line { height: 16px; width: 80%; margin: 10px 0; }
+.skel-line.short { width: 55%; }
+.skel-block { height: 120px; width: 100%; margin: 6px 0; }
+.side-skel { padding: 4px 14px; display: grid; gap: 12px; }
+.side-skel .skel { height: 12px; width: 70%; }
+.side-skel .skel:nth-child(2) { width: 55%; }

@@ -42,7 +42,6 @@ export default function HistoryPanel({
         </div>
         <div className="history-body">
           <ul className="history-list">
-            {list === null && <li className="muted small">Loading…</li>}
             {list?.length === 0 && <li className="muted small">No earlier versions yet. They&apos;re saved as you edit, every 10 minutes at most.</li>}
             {list?.map((v) => (
               <li key={v.id} className={pick?.id === v.id ? "sel" : ""} onClick={() => open(v)}>

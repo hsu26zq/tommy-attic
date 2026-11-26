@@ -149,6 +149,28 @@ function DrawingCanvas({
 
   const display = current ? [...strokes, current] : strokes;
 
+  // Drag the bottom edge to make the drawing taller or shorter (never cuts off strokes)
+  const resizing = useRef<{ y: number; h: number } | null>(null);
+  const lowest = useMemo(() => strokes.reduce((m, s) => s.p.reduce((mm, pt) => Math.max(mm, pt[1] + s.s), m), 0), [strokes]);
+  function resizeDown(e: React.PointerEvent) {
+    e.preventDefault();
+    e.stopPropagation();
+    (e.target as Element).setPointerCapture(e.pointerId);
+    resizing.current = { y: e.clientY, h };
+  }
+  function resizeMove(e: React.PointerEvent) {
+    const r = resizing.current;
+    if (!r || !svgRef.current) return;
+    const scale = W / svgRef.current.getBoundingClientRect().width;
+    const min = Math.max(150, Math.ceil(lowest + 20));
+    setH(Math.round(Math.min(5000, Math.max(min, r.h + (e.clientY - r.y) * scale))));
+  }
+  function resizeUp() {
+    if (!resizing.current) return;
+    resizing.current = null;
+    onSave(JSON.stringify(strokes), h);
+  }
+
   return (
     <div className="drawing" contentEditable={false} onMouseDown={(e) => editable && e.stopPropagation()}>
       {editable && (
@@ -173,7 +195,6 @@ function DrawingCanvas({
           <button className={`tool ${eraser ? "on" : ""}`} onClick={() => setEraser(!eraser)}>Eraser</button>
           <button className="tool" onClick={undo}>Undo</button>
           <button className="tool" onClick={() => strokes.length && confirm("Clear the drawing?") && commit([])}>Clear</button>
-          <button className="tool" onClick={() => { const nh = h + 200; setH(nh); onSave(JSON.stringify(strokes), nh); }}>Taller</button>
           <button className={`tool ${penOnly ? "on" : ""}`} onClick={() => setPenOnly(!penOnly)} title="Ignore fingers and palm, draw only with Apple Pencil">
             Pencil only
           </button>
@@ -192,6 +213,16 @@ function DrawingCanvas({
       >
         <Strokes strokes={display} height={h} />
       </svg>
+      {editable && (
+        <div
+          className="drawing-resize"
+          title="Drag to resize"
+          onPointerDown={resizeDown}
+          onPointerMove={resizeMove}
+          onPointerUp={resizeUp}
+          onPointerCancel={resizeUp}
+        />
+      )}
     </div>
   );
 }

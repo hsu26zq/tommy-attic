@@ -95,7 +95,15 @@ export default function NoteEditor({
   const onEdit = useCallback((content: unknown[], markdown: string, ydoc: string) => change({ content, markdown, ydoc }), [change]);
 
   if (loadError) return <p className="muted">{loadError}</p>;
-  if (!note) return <p className="muted small">Loading…</p>;
+  if (!note)
+    return (
+      <div className="page" aria-busy="true">
+        <div className="page-icon-row" />
+        <div className="skel skel-title" />
+        <div className="skel skel-line" />
+        <div className="skel skel-line short" />
+      </div>
+    );
 
   const ctx: NoteCtx = { note, change, handle };
 

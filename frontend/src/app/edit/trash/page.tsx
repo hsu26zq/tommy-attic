@@ -36,7 +36,6 @@ export default function Trash() {
       </Topbar>
       <div className="page">
         <h1 className="page-heading">Trash</h1>
-        {items === null && <p className="muted small">Loading…</p>}
         {items?.length === 0 && <p className="muted">Trash is empty.</p>}
         <ul className="list">
           {items?.map((i) => (

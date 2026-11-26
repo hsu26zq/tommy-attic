@@ -96,7 +96,7 @@ function DatabaseView({ databaseId, editable }: { databaseId: string; editable: 
   }
 
   if (error) return <div className="db-empty">{error}</div>;
-  if (!db) return <div className="db-empty">Loading…</div>;
+  if (!db) return <div className="skel skel-block" />;
 
   const sortBy = (col: string) =>
     setSort((s) => (s?.col === col ? (s.dir === 1 ? { col, dir: -1 } : null) : { col, dir: 1 }));

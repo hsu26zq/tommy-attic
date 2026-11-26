@@ -141,7 +141,9 @@ export default function Sidebar({ notes, open, onClose }: { notes: NoteSummary[]
         </div>
         <div className="tree">
           {notes === null ? (
-            <p className="muted small side-pad">Loading… (up to a minute if the server was asleep)</p>
+            <div className="side-skel" aria-busy="true">
+              <div className="skel" /><div className="skel" /><div className="skel" />
+            </div>
           ) : notes.length === 0 ? (
             <p className="muted small side-pad">No pages yet.</p>
           ) : (
