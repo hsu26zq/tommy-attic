@@ -2,7 +2,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import { createReactBlockSpec } from "@blocknote/react";
-import { api, type Column, type ColumnOption, type ColumnType, type Database, type DbView, type Row } from "@/lib/api";
+import { api, type Column, type Database, type DbView, type Row } from "@/lib/api";
 import { supabase } from "@/lib/supabase";
 import { optionsOf, valueText } from "./PropertyCell";
 import { type DbApi } from "./shared";
