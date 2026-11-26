@@ -27,6 +27,7 @@ export default function Settings() {
   const [passkeys, setPasskeys] = useState<{ id: string; friendly_name?: string; created_at?: string }[]>([]);
   const [msg, setMsg] = useState("");
   const [err, setErr] = useState("");
+  const [newPassword, setNewPassword] = useState("");
 
   const load = useCallback(async () => {
     try {
@@ -112,6 +113,18 @@ export default function Settings() {
     load();
   }
 
+  async function savePassword(e: React.FormEvent) {
+    e.preventDefault();
+    setErr("");
+    setMsg("");
+    const { error } = await supabase().auth.updateUser({ password: newPassword });
+    if (error) setErr(error.message);
+    else {
+      setNewPassword("");
+      setMsg("Password saved. You can now log in with your email + password.");
+    }
+  }
+
   async function logoutEverywhere() {
     if (!confirm("Log out on every device, including this one?")) return;
     await supabase().auth.signOut({ scope: "global" });
@@ -181,6 +194,24 @@ export default function Settings() {
           ))}
         </ul>
         <button className="btn" onClick={addPasskey}>Add a passkey</button>
+      </div>
+
+      <div className="card">
+        <h2>Password</h2>
+        <p className="muted small">Set a password to log in on computers where the passkey QR code doesn&apos;t work. Use at least 12 characters.</p>
+        <form onSubmit={savePassword} className="row">
+          <input
+            type="password"
+            placeholder="New password"
+            value={newPassword}
+            onChange={(e) => setNewPassword(e.target.value)}
+            minLength={12}
+            required
+            autoComplete="new-password"
+            style={{ font: "inherit", padding: "10px 12px", border: "1px solid var(--line)", borderRadius: 10, flex: 1, minWidth: 0 }}
+          />
+          <button className="btn">Save password</button>
+        </form>
       </div>
 
       <div className="card">

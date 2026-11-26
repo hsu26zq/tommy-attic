@@ -19,6 +19,7 @@ export default function LoginPage() {
   const [idle, setIdle] = useState(false);
   const [codeSent, setCodeSent] = useState(false);
   const [code, setCode] = useState("");
+  const [password, setPassword] = useState("");
 
   // Coming back from an email login link: the session is picked up from the URL automatically.
   useEffect(() => {
@@ -72,6 +73,20 @@ export default function LoginPage() {
     }
   }
 
+  async function passwordLogin(e: React.FormEvent) {
+    e.preventDefault();
+    setError("");
+    setBusy(true);
+    const { error: err } = await supabase().auth.signInWithPassword({ email, password });
+    if (err) {
+      setBusy(false);
+      setError("Wrong email or password.");
+      return;
+    }
+    await afterLogin("password");
+    router.replace("/edit");
+  }
+
   // The code from the email can be read on your phone and typed on this computer.
   async function verifyCode(e: React.FormEvent) {
     e.preventDefault();
@@ -97,6 +112,21 @@ export default function LoginPage() {
           Log in with passkey
         </button>
         <p className="muted small">On someone else&apos;s computer, choose your phone and scan the QR code.</p>
+
+        <div className="divider">or use your password</div>
+        <form onSubmit={passwordLogin} style={{ display: "grid", gap: 8 }}>
+          <input type="email" placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} required autoComplete="username" />
+          <input
+            type="password"
+            placeholder="Password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            required
+            autoComplete="current-password"
+            style={{ font: "inherit", padding: "10px 12px", border: "1px solid var(--line)", borderRadius: 10 }}
+          />
+          <button className="btn secondary" disabled={busy}>Log in with password</button>
+        </form>
 
         <div className="divider">or log in by email</div>
         <form onSubmit={emailLogin} className="row">
