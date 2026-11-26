@@ -132,6 +132,19 @@ function LiveEditor({ noteId, onChange, onReady, doc, provider }: Props & { doc:
     });
   }, [editor, onReady]);
 
+  // Let clicks on a code block's language picker reach the picker instead of the editor
+  useEffect(() => {
+    const keep = (e: Event) => {
+      if ((e.target as Element | null)?.closest?.('[data-content-type="codeBlock"] select')) e.stopPropagation();
+    };
+    window.addEventListener("mousedown", keep, true);
+    window.addEventListener("pointerdown", keep, true);
+    return () => {
+      window.removeEventListener("mousedown", keep, true);
+      window.removeEventListener("pointerdown", keep, true);
+    };
+  }, []);
+
   const extraSlashItems: DefaultReactSuggestionItem[] = [
     {
       title: "Database",

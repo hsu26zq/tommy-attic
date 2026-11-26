@@ -138,7 +138,11 @@ input:focus { border-color: #b8b7b3; }
 .page .bn-editor { padding-inline: 0 !important; font-family: var(--font); }
 .bn-container { --bn-font-family: var(--font); }
 .bn-block-content[data-content-type="codeBlock"] { background: #f7f6f3 !important; color: var(--text) !important; border-radius: 6px; }
-.bn-block-content[data-content-type="codeBlock"] select { color: var(--muted) !important; }
+.bn-block-content[data-content-type="codeBlock"] > div > select {
+  color: var(--muted) !important; opacity: 1 !important; width: auto; field-sizing: content; font-size: 12px; padding: 2px 16px 2px 6px; left: 14px; border-radius: 4px;
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='5'%3E%3Cpath d='M0 0l4 5 4-5z' fill='%23a5a49f'/%3E%3C/svg%3E") no-repeat right 5px center !important;
+}
+.bn-block-content[data-content-type="codeBlock"] > div > select:hover { background-color: var(--hover) !important; color: var(--text) !important; }
 .bn-block-content[data-content-type="codeBlock"] code span { color: var(--shiki-light) !important; background: transparent !important; }
 .slash-icon { font-size: 16px; width: 18px; display: inline-block; text-align: center; }
 .note-link { color: var(--text); text-decoration: none; border-bottom: 1px solid #d3d2ce; font-weight: 500; }
