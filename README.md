@@ -26,7 +26,7 @@ Supabase – notes, login (passkeys), trusted devices, files
 2. **Backend:** every write is checked against the owner account.
 3. **Database:** Row Level Security. Visitors can only read notes marked public.
 
-Trusted devices stay logged in. Every other device gets a short session (logged out when the
+Trusted devices stay logged in. QR login: scan with your iPhone and approve with Face ID. Every other device gets a short session (logged out when the
 browser closes or after 30 minutes idle) and triggers a login alert.
 
 ## Run it locally
