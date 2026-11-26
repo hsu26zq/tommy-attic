@@ -571,3 +571,7 @@ td:hover .cell-input[type="date"] { color: inherit; }
 .toast { display: flex; align-items: center; gap: 12px; }
 .toast button { border: 0; background: none; color: var(--bg); opacity: 0.75; font: inherit; font-weight: 600; cursor: pointer; padding: 0; }
 .toast button:hover { opacity: 1; }
+
+/* Copying text only takes your content: page chrome (top bar, buttons, handles, toolbars) can't be selected */
+.topbar, .sidebar, .page-icon-row, .page-adds, .add-icon, .cover-actions, .bn-side-menu, .drawing-tools, .pdf-tools,
+.db-bar, .db-new, .lane-new, .cal-head, .backlinks h2, .callout-side, .embed, .toast, .context-menu, .popover { user-select: none; -webkit-user-select: none; }
