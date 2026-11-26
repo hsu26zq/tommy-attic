@@ -34,11 +34,11 @@ code { font-family: var(--mono); font-size: 0.9em; background: var(--hover); pad
 
 /* ---------- app shell ---------- */
 .app { display: flex; min-height: 100vh; }
-.main { flex: 1; min-width: 0; overflow-x: hidden; }
+.main { flex: 1; min-width: 0; overflow-x: hidden; margin-left: 248px; }
 .banner { padding: 8px 16px; background: #fdecec; color: var(--danger); font-size: 13px; }
 
 .sidebar {
-  width: 248px; flex-shrink: 0; height: 100vh; position: sticky; top: 0;
+  width: 248px; height: 100vh; height: 100dvh; position: fixed; left: 0; top: 0; z-index: 20;
   display: flex; flex-direction: column; background: var(--side); border-right: 1px solid var(--line);
   font-size: 14px; color: #5f5e5b;
 }
@@ -238,17 +238,20 @@ tr:hover .db-open, tr:hover .db-del { opacity: 1; }
 .tag { background: #f1f0ee; border-radius: 4px; padding: 0 6px; font-size: 13px; }
 
 /* ---------- drawing ---------- */
-.drawing { width: 100%; margin: 6px 0; }
-.drawing-tools { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; padding: 6px 8px; border: 1px solid var(--line); border-bottom: none; border-radius: 8px 8px 0 0; }
-.drawing-tools button { border: 1px solid var(--line); background: #fff; cursor: pointer; }
-.drawing-tools .swatch { width: 20px; height: 20px; border-radius: 50%; padding: 0; }
-.drawing-tools .swatch.on { outline: 2px solid var(--text); outline-offset: 2px; }
-.drawing-tools .size { width: 26px; height: 26px; border-radius: 6px; display: inline-flex; align-items: center; justify-content: center; padding: 0; }
-.drawing-tools .size span { display: block; border-radius: 50%; background: var(--text); }
-.drawing-tools .size.on, .drawing-tools .tool.on { background: var(--text); color: #fff; border-color: var(--text); }
-.drawing-tools .size.on span { background: #fff; }
-.drawing-tools .tool { padding: 3px 9px; border-radius: 6px; font-size: 12px; }
-.drawing-tools .sep { width: 1px; height: 18px; background: var(--line); margin: 0 2px; }
+.drawing { width: 100%; margin: 0 0 6px; }
+/* Toolbars on drawing + PDF blocks: one 30px row so the + ⋮⋮ handles line up with it */
+.drawing-tools, .pdf-tools { display: flex; align-items: center; gap: 2px; height: 30px; padding: 0 6px; box-sizing: border-box; font-size: 12px; color: var(--muted); }
+.drawing-tools { flex-wrap: nowrap; overflow-x: auto; border: 1px solid var(--line); border-bottom: none; border-radius: 8px 8px 0 0; height: 32px; }
+.drawing-tools button, .pdf-tools button, .pdf-tools a {
+  height: 24px; min-width: 24px; padding: 0 8px; border: 0; border-radius: 6px; background: none; color: inherit; font: inherit;
+  display: inline-flex; align-items: center; justify-content: center; cursor: pointer; text-decoration: none; flex-shrink: 0; line-height: 1;
+}
+.drawing-tools button:hover, .pdf-tools button:hover, .pdf-tools a:hover { background: var(--hover, #efefed); color: var(--text); }
+.drawing-tools .swatch, .drawing-tools .size { padding: 0; }
+.drawing-tools .swatch span { width: 14px; height: 14px; border-radius: 50%; display: block; }
+.drawing-tools .size span { display: block; border-radius: 50%; background: currentColor; }
+.drawing-tools .on { background: var(--active); color: var(--text); }
+.drawing-tools .sep { width: 1px; height: 16px; background: var(--line); margin: 0 4px; flex-shrink: 0; }
 .drawing-canvas { display: block; width: 100%; height: auto; background: #fff; border: 1px solid var(--line); border-radius: 8px; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
 .drawing-tools + .drawing-canvas { border-radius: 0 0 8px 8px; }
 .drawing-canvas.editable { cursor: crosshair; }
@@ -258,9 +261,8 @@ tr:hover .db-open, tr:hover .db-del { opacity: 1; }
 /* ---------- pdf ---------- */
 [data-content-type="pdf"], [data-content-type="pdf"] .bn-file-block-content-wrapper { width: 100%; }
 .pdf-viewer { width: 100%; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; background: #fff; }
-.pdf-tools { display: flex; align-items: center; gap: 8px; padding: 6px 10px; border-bottom: 1px solid var(--line); }
-.pdf-tools button { border: 1px solid var(--line); background: #fff; border-radius: 6px; min-width: 26px; height: 24px; cursor: pointer; }
-.pdf-tools .pdf-toggle { padding: 0 8px; font-size: 12px; }
+.pdf-tools { border-bottom: 1px solid var(--line); }
+.pdf-tools .pdf-label { padding-left: 4px; }
 .pdf-pages { overflow: auto; background: #f1f0ee; padding: 12px; -webkit-overflow-scrolling: touch; }
 .pdf-page { margin: 0 auto 12px; background: #fff; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12); }
 
@@ -305,6 +307,7 @@ tr:hover .db-open, tr:hover .db-del { opacity: 1; }
   .sidebar.open { transform: none; box-shadow: 0 0 40px rgba(15, 15, 15, 0.2); }
   .sidebar-backdrop.show { display: block; position: fixed; inset: 0; z-index: 70; background: rgba(15, 15, 15, 0.2); }
   .menu-btn { display: inline-block; }
+  .main { margin-left: 0; }
   .page { padding: 24px 20px 120px; }
   .page-title { font-size: 32px; }
   .panel .page { padding: 16px 20px 120px; }

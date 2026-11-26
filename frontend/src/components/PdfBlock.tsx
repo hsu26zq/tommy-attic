@@ -124,12 +124,12 @@ function PdfViewer({ url, height, collapsed, onToggle }: { url: string; height: 
   return (
     <div className={`pdf-viewer ${collapsed ? "pdf-collapsed" : ""}`} contentEditable={false} onMouseDown={(e) => e.stopPropagation()}>
       <div className="pdf-tools">
-        <span className="muted small">{collapsed ? "PDF" : pdf ? `${pdf.numPages} page${pdf.numPages === 1 ? "" : "s"}` : error || "Loading PDF…"}</span>
+        <span className="pdf-label">{collapsed ? "PDF" : pdf ? `${pdf.numPages} page${pdf.numPages === 1 ? "" : "s"}` : error || "Loading PDF…"}</span>
         <span style={{ flex: 1 }} />
         {!collapsed && (
           <>
             <button onClick={() => setZoom((z) => Math.max(0.5, z - 0.25))}>−</button>
-            <span className="small">{Math.round(zoom * 100)}%</span>
+            <span>{Math.round(zoom * 100)}%</span>
             <button onClick={() => setZoom((z) => Math.min(3, z + 0.25))}>+</button>
           </>
         )}
@@ -137,7 +137,7 @@ function PdfViewer({ url, height, collapsed, onToggle }: { url: string; height: 
           <button className="pdf-toggle" onClick={onToggle}>{collapsed ? "Show" : "Hide"}</button>
         )}
         {src && (
-          <a href={src} target="_blank" rel="noreferrer" className="small">
+          <a href={src} target="_blank" rel="noreferrer">
             Open ↗
           </a>
         )}

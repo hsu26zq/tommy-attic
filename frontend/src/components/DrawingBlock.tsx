@@ -158,9 +158,10 @@ function DrawingCanvas({
               key={c}
               title={c === "#f2c94c" ? "Highlighter" : "Pen"}
               className={`swatch ${!eraser && color === c ? "on" : ""}`}
-              style={{ background: c }}
               onClick={() => { setColor(c); setEraser(false); }}
-            />
+            >
+              <span style={{ background: c }} />
+            </button>
           ))}
           <span className="sep" />
           {SIZES.map((s) => (
