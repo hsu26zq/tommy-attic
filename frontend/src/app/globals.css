@@ -575,3 +575,5 @@ td:hover .cell-input[type="date"] { color: inherit; }
 /* Copying text only takes your content: page chrome (top bar, buttons, handles, toolbars) can't be selected */
 .topbar, .sidebar, .page-icon-row, .page-adds, .add-icon, .cover-actions, .bn-side-menu, .drawing-tools, .pdf-tools,
 .db-bar, .db-new, .lane-new, .cal-head, .backlinks h2, .callout-side, .embed, .toast, .context-menu, .popover { user-select: none; -webkit-user-select: none; }
+/* Handles sit a little away from the text, with a small gap between + and ⋮⋮ */
+.bn-mantine .bn-side-menu { padding-right: 8px; gap: 2px; display: flex; align-items: center; }
