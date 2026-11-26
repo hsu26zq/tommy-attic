@@ -1,7 +1,6 @@
-/* Calm and warm: paper-white page, soft stone sidebar, controls that appear only when needed.
-   Follows the computer's light/dark setting automatically. */
+/* Calm and warm: paper-white page, soft stone sidebar, controls that appear only when needed. */
 :root {
-  color-scheme: light dark;
+  color-scheme: light;
   --bg: #fdfcfa;
   --side: #f5f4f0;
   --surface: #ffffff;
@@ -20,24 +19,6 @@
   --radius: 6px;
   --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, "Helvetica Neue", Arial, sans-serif;
   --mono: "SF Mono", ui-monospace, Menlo, Consolas, monospace;
-}
-@media (prefers-color-scheme: dark) {
-  :root {
-    --bg: #1c1b19;
-    --side: #21201d;
-    --surface: #272522;
-    --sunken: #24221f;
-    --text: #e9e6e0;
-    --muted: #a39e95;
-    --faint: #6f6b64;
-    --line: #34312d;
-    --hover: rgba(255, 245, 225, 0.06);
-    --active: rgba(255, 245, 225, 0.1);
-    --accent: #d98a62;
-    --danger: #e0766d;
-    --ok: #7fb08c;
-    --shadow: 0 0 0 1px rgba(255, 255, 255, 0.06), 0 8px 28px rgba(0, 0, 0, 0.45);
-  }
 }
 
 * { box-sizing: border-box; }
@@ -197,7 +178,7 @@ input:focus { border-color: var(--faint); }
 }
 .bn-block-content[data-content-type="codeBlock"] > div > select:hover { background-color: var(--hover) !important; color: var(--text) !important; }
 .bn-block-content[data-content-type="codeBlock"] code span { background: transparent !important; }
-@media (prefers-color-scheme: light) { .bn-block-content[data-content-type="codeBlock"] code span { color: var(--shiki-light) !important; } }
+.bn-block-content[data-content-type="codeBlock"] code span { color: var(--shiki-light) !important; }
 .slash-icon { font-size: 16px; width: 18px; display: inline-block; text-align: center; }
 .note-link { color: var(--text); text-decoration: none; border-bottom: 1px solid var(--faint); font-weight: 500; }
 .note-link::before { content: "↗ "; color: var(--faint); font-weight: 400; }
@@ -447,10 +428,6 @@ tr:hover .db-open, tr:hover .db-del { opacity: 1; }
 .tint-dot.on { box-shadow: inset 0 0 0 1px var(--line), 0 0 0 2px var(--surface), 0 0 0 3.5px var(--faint); }
 .tint-sand { --tint-bg: #f6f0e3; } .tint-clay { --tint-bg: #f8e6dc; } .tint-sage { --tint-bg: #e8efe2; }
 .tint-dusk { --tint-bg: #e5eaf5; } .tint-plum { --tint-bg: #f0e7f3; } .tint-gray { --tint-bg: #efeeeb; }
-@media (prefers-color-scheme: dark) {
-  .tint-sand { --tint-bg: #2f2b22; } .tint-clay { --tint-bg: #36271f; } .tint-sage { --tint-bg: #242c22; }
-  .tint-dusk { --tint-bg: #232836; } .tint-plum { --tint-bg: #2e2433; } .tint-gray { --tint-bg: #2a2926; }
-}
 .bn-block-content[data-content-type="callout"] { width: 100%; }
 
 /* ---------- embed ---------- */
@@ -512,13 +489,6 @@ tr:hover .db-open, tr:hover .db-del { opacity: 1; }
 .opt-green { --opt-bg: #e1eedf; --opt-fg: #3d6b45; } .opt-blue { --opt-bg: #dfe9f6; --opt-fg: #305b8f; }
 .opt-purple { --opt-bg: #ebe3f4; --opt-fg: #66478a; } .opt-pink { --opt-bg: #f6e1ea; --opt-fg: #93406a; }
 .opt-red { --opt-bg: #f8e0dd; --opt-fg: #a3392f; }
-@media (prefers-color-scheme: dark) {
-  .opt-gray { --opt-bg: #34322e; --opt-fg: #c9c5bd; } .opt-brown { --opt-bg: #3b2f26; --opt-fg: #d9b89c; }
-  .opt-orange { --opt-bg: #45301f; --opt-fg: #f0aa7c; } .opt-yellow { --opt-bg: #403619; --opt-fg: #e6cc70; }
-  .opt-green { --opt-bg: #253526; --opt-fg: #9cce9f; } .opt-blue { --opt-bg: #213046; --opt-fg: #9cc0ec; }
-  .opt-purple { --opt-bg: #33283f; --opt-fg: #c7a9e8; } .opt-pink { --opt-bg: #3d2431; --opt-fg: #eba3c6; }
-  .opt-red { --opt-bg: #43231f; --opt-fg: #f0a197; }
-}
 
 /* table extras: column resize grips, row handles */
 .db-table th { position: relative; }

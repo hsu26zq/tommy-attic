@@ -8,7 +8,6 @@ import { HocuspocusProvider } from "@hocuspocus/provider";
 import { BlockNoteEditor, combineByGroup, filterSuggestionItems, insertOrUpdateBlockForSlashMenu } from "@blocknote/core";
 import { CollaborationExtension, blocksToYXmlFragment } from "@blocknote/core/yjs";
 import { BlockNoteView } from "@blocknote/mantine";
-import { useDark } from "@/lib/useDark";
 import {
   BlockColorsItem,
   DragHandleMenu,
@@ -144,7 +143,6 @@ export default function Editor(props: Props) {
 
 function LiveEditor({ noteId, onChange, onReady, doc, provider }: Props & { doc: Y.Doc; provider: HocuspocusProvider }) {
 
-  const dark = useDark();
   const editor = useCreateBlockNote({
     ...editableOptions,
     extensions: [
@@ -268,7 +266,7 @@ function LiveEditor({ noteId, onChange, onReady, doc, provider }: Props & { doc:
       <div>
         <BlockNoteView
           editor={editor}
-          theme={dark ? "dark" : "light"}
+          theme="light"
           slashMenu={false}
           sideMenu={false}
           onChange={() => {
