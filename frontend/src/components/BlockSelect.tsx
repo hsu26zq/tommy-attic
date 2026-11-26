@@ -201,34 +201,6 @@ export default function BlockSelect({ editor }: { editor: Editor }) {
     const onCut = (e: ClipboardEvent) => copy(e, true);
     const onFocusIn = (e: FocusEvent) => root()?.contains(e.target as Node) && clear();
 
-    // Dragging a block: keep an empty line at the very end so there's always a spot below the last block
-    // (removed again after the drop if it's still empty)
-    let spacer: string | null = null;
-    function dragStart(e: DragEvent) {
-      if (!(e.target as HTMLElement)?.closest?.(".bn-side-menu")) return;
-      const end = editor.document.at(-1);
-      const empty = end?.type === "paragraph" && (!end.content || end.content.length === 0);
-      if (empty) return;
-      const [added] = editor.insertBlocks([{ type: "paragraph" }], end, "after");
-      spacer = added?.id ?? null;
-    }
-    function dragEnd() {
-      if (!spacer) return;
-      const id = spacer;
-      spacer = null;
-      setTimeout(() => {
-        const b = editor.getBlock(id);
-        if (b && b.type === "paragraph" && (!b.content || b.content.length === 0)) editor.removeBlocks([b]);
-      }, 50);
-    }
-    // the handle can vanish mid-drag (so "dragend" may never arrive): also tidy up on drop,
-    // or on the first mouse move after the drag (the mouse doesn't report moves while dragging)
-    const afterDrag = () => spacer && dragEnd();
-    document.addEventListener("dragstart", dragStart, true);
-    document.addEventListener("dragend", dragEnd, true);
-    document.addEventListener("drop", dragEnd, true);
-    window.addEventListener("mousemove", afterDrag);
-
     window.addEventListener("mousedown", down);
     window.addEventListener("mousemove", move);
     window.addEventListener("mouseup", up);
@@ -247,10 +219,6 @@ export default function BlockSelect({ editor }: { editor: Editor }) {
       document.removeEventListener("copy", onCopy);
       document.removeEventListener("cut", onCut);
       document.removeEventListener("focusin", onFocusIn);
-      document.removeEventListener("dragstart", dragStart, true);
-      document.removeEventListener("dragend", dragEnd, true);
-      document.removeEventListener("drop", dragEnd, true);
-      window.removeEventListener("mousemove", afterDrag);
     };
   }, [editor]);
 
