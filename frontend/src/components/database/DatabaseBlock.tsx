@@ -11,6 +11,7 @@ import Popover from "./Popover";
 import { toast } from "@/lib/exportNote";
 import BoardView from "./BoardView";
 import CalendarView from "./CalendarView";
+import GalleryView from "./GalleryView";
 
 // Database block: rows are notes with their own pages. Seen as a table, a board, or a calendar.
 const RowPanel = dynamic(() => import("./RowPanel"), { ssr: false });
@@ -173,9 +174,9 @@ function DatabaseView({ databaseId, editable }: { databaseId: string; editable: 
     <div className="db" contentEditable={false} onKeyDown={(e) => e.stopPropagation()} onMouseDown={(e) => e.stopPropagation()}>
       <div className="db-bar">
         <div className="db-views">
-          {(["table", "board", "calendar"] as const).map((l) => (
-            <button key={l} className={layout === l ? "on" : ""} onClick={() => (l === "table" ? setView({ ...db.view, layout: l }) : ensure(l))}>
-              {l === "table" ? "Table" : l === "board" ? "Board" : "Calendar"}
+          {(["table", "board", "calendar", "gallery"] as const).map((l) => (
+            <button key={l} className={layout === l ? "on" : ""} onClick={() => (l === "board" || l === "calendar" ? ensure(l) : setView({ ...db.view, layout: l }))}>
+              {l[0].toUpperCase() + l.slice(1)}
             </button>
           ))}
         </div>
@@ -202,7 +203,7 @@ function DatabaseView({ databaseId, editable }: { databaseId: string; editable: 
           </span>
         </div>
       </div>
-      {layout === "board" ? <BoardView {...ctx} /> : layout === "calendar" ? <CalendarView {...ctx} /> : <TableView {...ctx} />}
+      {layout === "board" ? <BoardView {...ctx} /> : layout === "calendar" ? <CalendarView {...ctx} /> : layout === "gallery" ? <GalleryView {...ctx} /> : <TableView {...ctx} />}
       {openRow && (
         <RowPanel
           rowId={openRow}

@@ -39,7 +39,7 @@ function cleanView(v: unknown) {
   const o = (v && typeof v === "object" ? v : {}) as Record<string, unknown>;
   const str = (x: unknown) => (typeof x === "string" ? x.slice(0, 40) : undefined);
   return {
-    layout: ["table", "board", "calendar"].includes(String(o.layout)) ? o.layout : "table",
+    layout: ["table", "board", "calendar", "gallery"].includes(String(o.layout)) ? o.layout : "table",
     groupBy: str(o.groupBy),
     dateBy: str(o.dateBy),
     sort:
@@ -67,7 +67,7 @@ databases.get("/:id", async (c) => {
     c.var.db.from("databases").select("*").eq("id", id).maybeSingle(),
     c.var.db
       .from("notes")
-      .select("id,title,icon,properties,position,updated_at")
+      .select("id,title,icon,cover,properties,position,updated_at")
       .eq("database_id", id)
       .is("deleted_at", null)
       .order("position"),
