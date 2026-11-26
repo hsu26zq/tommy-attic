@@ -22,6 +22,7 @@ import {
   useComponentsContext,
   useCreateBlockNote,
   useExtensionState,
+  usePortalElement,
   type DefaultReactSuggestionItem,
 } from "@blocknote/react";
 import { SideMenuExtension } from "@blocknote/core/extensions";
@@ -138,6 +139,54 @@ function CopyBlockLinkItem() {
     >
       Copy link
     </C.Generic.Menu.Item>
+  );
+}
+
+// "Turn into" in the ⋮⋮ menu: change a text block's kind without retyping it
+const TURN_INTO: { label: string; type: string; props?: Record<string, unknown> }[] = [
+  { label: "Text", type: "paragraph" },
+  { label: "Heading 1", type: "heading", props: { level: 1 } },
+  { label: "Heading 2", type: "heading", props: { level: 2 } },
+  { label: "Heading 3", type: "heading", props: { level: 3 } },
+  { label: "Bullet list", type: "bulletListItem" },
+  { label: "Numbered list", type: "numberedListItem" },
+  { label: "To-do", type: "checkListItem" },
+  { label: "Toggle", type: "toggleListItem" },
+  { label: "Quote", type: "quote" },
+  { label: "Callout", type: "callout" },
+  { label: "Code", type: "codeBlock" },
+];
+const TEXT_TYPES = new Set(TURN_INTO.map((t) => t.type));
+
+function TurnIntoItem() {
+  const C = useComponentsContext()!;
+  const editor = useBlockNoteEditor();
+  const portal = usePortalElement();
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const block = useExtensionState(SideMenuExtension as any, { editor, selector: (s: any) => s?.block }) as { id: string; type: string; props: Record<string, unknown> } | undefined;
+  if (!block || !TEXT_TYPES.has(block.type)) return null;
+  const current = (t: (typeof TURN_INTO)[number]) => t.type === block.type && (!t.props || t.props.level === block.props.level);
+  return (
+    <C.Generic.Menu.Root position="right" sub portalElement={portal}>
+      <C.Generic.Menu.Trigger sub>
+        <C.Generic.Menu.Item className="bn-menu-item" subTrigger>
+          Turn into
+        </C.Generic.Menu.Item>
+      </C.Generic.Menu.Trigger>
+      <C.Generic.Menu.Dropdown sub className="bn-menu-dropdown">
+        {TURN_INTO.map((t) => (
+          <C.Generic.Menu.Item
+            key={t.label}
+            className="bn-menu-item"
+            checked={current(t)}
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            onClick={() => editor.updateBlock(block.id, { type: t.type, props: t.props ?? {} } as any)}
+          >
+            {t.label}
+          </C.Generic.Menu.Item>
+        ))}
+      </C.Generic.Menu.Dropdown>
+    </C.Generic.Menu.Root>
   );
 }
 
@@ -352,6 +401,7 @@ function LiveEditor({ noteId, onChange, onReady, doc, provider }: Props & { doc:
                 {...props}
                 dragHandleMenu={(p) => (
                   <DragHandleMenu {...p}>
+                    <TurnIntoItem />
                     <RemoveBlockItem>Delete</RemoveBlockItem>
                     <BlockColorsItem>Colors</BlockColorsItem>
                     <CopyBlockLinkItem />
