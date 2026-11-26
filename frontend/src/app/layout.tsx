@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import "@mantine/core/styles.css";
 import "./globals.css";
-import Header from "@/components/Header";
 
 export const metadata: Metadata = {
   title: { default: "Tommy's Attic", template: "%s · Tommy's Attic" },
@@ -12,7 +11,6 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en">
       <body>
-        <Header />
         <main>{children}</main>
         <footer className="site-footer">
           <p>© {new Date().getFullYear()} Tommy · Tommy&apos;s Attic</p>
