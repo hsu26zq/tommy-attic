@@ -58,6 +58,17 @@ notes.get("/search", async (c) => {
   );
 });
 
+// Everything, for "Export everything": every page and database row with its Markdown
+notes.get("/export", async (c) => {
+  const [{ data: list, error }, { data: dbs, error: dbError }] = await Promise.all([
+    c.var.db.from("notes").select("id,title,icon,parent_id,position,database_id,properties,markdown").is("deleted_at", null).order("position"),
+    c.var.db.from("databases").select("id,note_id,columns"),
+  ]);
+  fail(error);
+  fail(dbError);
+  return c.json({ notes: list ?? [], databases: dbs ?? [] });
+});
+
 // Trash
 notes.get("/trash", async (c) => {
   const { data, error } = await c.var.db
