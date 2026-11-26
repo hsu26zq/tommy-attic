@@ -97,19 +97,19 @@ devices.delete("/:id", async (c) => {
   return c.body(null, 204);
 });
 
-// Called right after every login. Logins from untrusted devices trigger an alert email.
+// Called right after every login. Every login sends an alert email.
 devices.post("/login-event", async (c) => {
   const body = await c.req.json().catch(() => ({}));
   const method = String(body.method ?? "unknown");
   const me = await currentDevice(c, c.var.db);
   const trusted = !!me?.approved;
-  if (!trusted) {
-    await sendLoginAlert({
-      method,
-      userAgent: c.req.header("User-Agent") ?? "unknown",
-      ip: c.req.header("CF-Connecting-IP") ?? c.req.header("X-Forwarded-For") ?? "unknown",
-    });
-  }
+  await sendLoginAlert({
+    method,
+    trusted,
+    device: me?.name ?? null,
+    userAgent: c.req.header("User-Agent") ?? "unknown",
+    ip: c.req.header("CF-Connecting-IP") ?? c.req.header("X-Forwarded-For") ?? "unknown",
+  });
   return c.json({ trusted });
 });
 

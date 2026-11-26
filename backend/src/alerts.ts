@@ -1,9 +1,9 @@
 import { env } from "./env.js";
 
 // Login alert emails. Does nothing until RESEND_API_KEY and ALERT_EMAIL are set.
-export async function sendLoginAlert(info: { method: string; userAgent: string; ip: string }) {
+export async function sendLoginAlert(info: { method: string; trusted: boolean; device: string | null; userAgent: string; ip: string }) {
   if (!env.resendKey || !env.alertEmail) {
-    console.log("[alert] login from untrusted device (email not configured)", info);
+    console.log("[alert] login (email not configured)", info);
     return;
   }
   const when = new Date().toUTCString();
@@ -13,10 +13,10 @@ export async function sendLoginAlert(info: { method: string; userAgent: string; 
     body: JSON.stringify({
       from: env.alertFrom,
       to: [env.alertEmail],
-      subject: "New login to Tommy's Attic",
+      subject: info.trusted ? `Login to Tommy's Attic · ${info.device ?? "trusted device"}` : "New login to Tommy's Attic · untrusted device",
       text:
-        `Someone logged in to your site from a device that isn't trusted.\n\n` +
-        `When: ${when}\nMethod: ${info.method}\nBrowser: ${info.userAgent}\nIP: ${info.ip}\n\n` +
+        `Someone logged in to your site.\n\n` +
+        `When: ${when}\nDevice: ${info.trusted ? `${info.device} (trusted)` : "not trusted"}\nMethod: ${info.method}\nBrowser: ${info.userAgent}\nIP: ${info.ip}\n\n` +
         `If this wasn't you, open Settings → Devices and click "Log out everywhere".`,
     }),
   });
