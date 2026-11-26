@@ -8,6 +8,7 @@ import { onNotesChanged } from "@/lib/notesEvents";
 import { checkDevice } from "@/lib/devices";
 import Sidebar from "./Sidebar";
 import SearchDialog from "./SearchDialog";
+import Shortcuts from "./Shortcuts";
 import { PanelIcon } from "./icons";
 
 type Ctx = { notes: NoteSummary[] | null; openSidebar: () => void; hidden: boolean; setHidden: (h: boolean) => void };
@@ -95,6 +96,7 @@ export default function Workspace({ children }: { children: ReactNode }) {
         </main>
       </div>
       <SearchDialog />
+        <Shortcuts />
     </WorkspaceCtx.Provider>
   );
 }
