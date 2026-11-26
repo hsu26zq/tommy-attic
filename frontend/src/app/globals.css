@@ -132,3 +132,27 @@ input[type="text"], input[type="email"], select {
   .hero h1 { font-size: 2.3rem; }
   .doc .bn-editor { padding-inline: 20px 0 !important; }
 }
+
+/* live sync status */
+.sync-pill { display: inline-flex; align-items: center; gap: 6px; font-size: 0.78rem; color: var(--ink-soft); margin: 4px 0 8px; }
+.sync-pill .dot { width: 8px; height: 8px; border-radius: 50%; background: #c9b98f; }
+.sync-pill.synced .dot { background: var(--ok); }
+.sync-pill.offline .dot { background: #c2412d; }
+
+/* drawing block */
+.drawing { width: 100%; margin: 6px 0; }
+.drawing-tools { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; padding: 6px 8px; border: 1px solid var(--line); border-bottom: none; border-radius: 10px 10px 0 0; background: #fffdf9; }
+.drawing-tools button { border: 1px solid var(--line); background: #fff; cursor: pointer; font: inherit; }
+.drawing-tools .swatch { width: 22px; height: 22px; border-radius: 50%; padding: 0; }
+.drawing-tools .swatch.on { outline: 2px solid var(--ink); outline-offset: 2px; }
+.drawing-tools .size { width: 28px; height: 28px; border-radius: 8px; display: inline-flex; align-items: center; justify-content: center; padding: 0; }
+.drawing-tools .size span { display: block; border-radius: 50%; background: var(--ink); }
+.drawing-tools .size.on, .drawing-tools .tool.on { background: var(--ink); color: var(--paper); border-color: var(--ink); }
+.drawing-tools .size.on span { background: var(--paper); }
+.drawing-tools .tool { padding: 4px 10px; border-radius: 8px; font-size: 0.8rem; }
+.drawing-tools .sep { width: 1px; height: 20px; background: var(--line); margin: 0 2px; }
+.drawing-canvas { display: block; width: 100%; height: auto; background: #fff; border: 1px solid var(--line); border-radius: 10px; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
+.drawing-tools + .drawing-canvas { border-radius: 0 0 10px 10px; }
+.drawing-canvas.editable { cursor: crosshair; }
+.drawing-canvas.erasing { cursor: cell; }
+.article .drawing-canvas { border: none; background: transparent; }

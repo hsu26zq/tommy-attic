@@ -109,3 +109,6 @@ begin
 end; $$;
 revoke execute on function public.export_notes(text) from public;
 grant execute on function public.export_notes(text) to anon, authenticated;
+
+-- Live-sync state (Yjs document, base64). The JSON content and markdown stay as the readable copies.
+alter table public.notes add column if not exists ydoc text;

@@ -40,7 +40,8 @@ export default function EditNote({ params }: { params: Promise<{ id: string }> }
     try {
       const saved = await api<Note>(`/notes/${id}`, {
         method: "PATCH",
-        body: JSON.stringify({ ...changes, base_updated_at: base.current }),
+        // Live sync merges edits between devices, so no "changed elsewhere" check is needed.
+        body: JSON.stringify(changes),
       });
       base.current = saved.updated_at;
       setNote((n) => (n ? { ...n, ...saved } : n));
@@ -131,6 +132,7 @@ export default function EditNote({ params }: { params: Promise<{ id: string }> }
       />
       <EditorClient
         key={note.id}
+        noteId={note.id}
         initialContent={note.content}
         onChange={(content, markdown) => change({ content, markdown })}
       />
