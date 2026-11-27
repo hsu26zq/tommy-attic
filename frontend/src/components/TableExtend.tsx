@@ -65,10 +65,33 @@ export default function TableExtend(props: ExtendButtonProps) {
     };
   }, [drag, editor, handles, props]);
 
+  // A table wider than the page scrolls sideways; keep the bars on its visible edge, not its far-off real edge.
+  const [, redraw] = useState(0);
+  const wrap = block ? document.querySelector<HTMLElement>(`.bn-block-outer[data-id="${CSS.escape(block.id)}"] .tableWrapper`) : null;
+  useEffect(() => {
+    if (!wrap) return;
+    const on = () => redraw((n) => n + 1);
+    wrap.addEventListener("scroll", on, { passive: true });
+    return () => wrap.removeEventListener("scroll", on);
+  }, [wrap]);
+  const table = wrap?.querySelector("table");
+  let shift = 0; // how far the table's real right edge is past the visible one
+  let lead = 0; // how much of the table is scrolled off to the left
+  let visibleW: number | undefined;
+  if (wrap && table) {
+    const w = wrap.getBoundingClientRect();
+    const t = table.getBoundingClientRect();
+    const right = w.right - (parseFloat(getComputedStyle(wrap).paddingRight) || 0);
+    shift = Math.max(0, t.right - right);
+    lead = Math.max(0, w.left - t.left);
+    visibleW = Math.max(40, Math.min(t.right, right) - Math.max(t.left, w.left));
+  }
+
   if (!editor.isEditable) return null;
   const rows = props.orientation === "addOrRemoveRows";
   return (
     <div
+      style={shift || lead ? (rows ? { width: visibleW, transform: `translateX(${lead}px)` } : { transform: `translateX(${-shift}px)` }) : undefined}
       className={`tbl-edge ${rows ? "tbl-edge-rows" : "tbl-edge-cols"} ${drag ? "dragging" : ""}`}
       title={rows ? "Drag to add or remove rows" : "Drag to add or remove columns"}
       onMouseDown={(e) => start(e, [rows ? "rows" : "columns"])}

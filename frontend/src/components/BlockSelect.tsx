@@ -12,7 +12,7 @@ type Editor = any;
 // Also: a plain click below the last block starts a new line there.
 // a columns row counts as one block
 const TOP_BLOCKS = ".bn-editor > .bn-block-group > :is(.bn-block-outer, .bn-block-column-list)";
-const NOT_START = ".bn-block-content, .bn-side-menu, button, input, textarea, select, a, .page-title, .page-icon-row, .cover, .topbar, .backlinks, .popover, .context-menu, .bn-container [role=menu], .mantine-Popover-dropdown, .history";
+const NOT_START = ".bn-block-content, .bn-side-menu, .col-edge, .tbl-edge, .db-edge, button, input, textarea, select, a, .page-title, .page-icon-row, .cover, .topbar, .backlinks, .popover, .context-menu, .bn-container [role=menu], .mantine-Popover-dropdown, .history";
 
 export default function BlockSelect({ editor }: { editor: Editor }) {
   const selected = useRef<string[]>([]);
@@ -31,9 +31,18 @@ export default function BlockSelect({ editor }: { editor: Editor }) {
     document.head.appendChild(style);
     function paint(ids: string[]) {
       selected.current = ids;
-      style.textContent = ids.length
-        ? `${ids.map((id) => `.bn-block-outer[data-id="${CSS.escape(id)}"] > .bn-block, .bn-block-column-list[data-id="${CSS.escape(id)}"]`).join(",")} { background: rgba(240,90,90,0.1); border-radius: 4px; }`
-        : "";
+      // Neighbouring selected blocks join into one box: only the top of a run and the bottom of a run are rounded.
+      const set = new Set(ids);
+      const order = outers().map((el) => el.dataset.id ?? "");
+      const sel = (id: string) => `.bn-block-outer[data-id="${CSS.escape(id)}"] > .bn-block, .bn-block-column-list[data-id="${CSS.escape(id)}"]`;
+      style.textContent = ids
+        .map((id) => {
+          const i = order.indexOf(id);
+          const top = !set.has(order[i - 1]) ? "4px" : "0";
+          const bottom = !set.has(order[i + 1]) ? "4px" : "0";
+          return `${sel(id)} { background: rgba(240,90,90,0.1); border-radius: ${top} ${top} ${bottom} ${bottom}; }`;
+        })
+        .join("\n");
       document.body.classList.toggle("blocks-selected", ids.length > 0);
     }
     const clear = () => selected.current.length && paint([]);

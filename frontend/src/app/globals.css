@@ -627,8 +627,11 @@ button.side-link:disabled { cursor: default; color: var(--faint); }
 .bn-editor .bn-inline-content:is(h1,h2,h3) { font-family: var(--serif); font-weight: 600; letter-spacing: 0; }
 
 /* add-a-column button on the right edge of a columns row */
-.col-add { position: absolute; z-index: 30; width: 18px; min-height: 28px; border: 0; border-radius: 4px; background: transparent; color: var(--faint); font-size: 15px; line-height: 1; cursor: pointer; display: flex; align-items: center; justify-content: center; }
-.col-add:hover { background: var(--hover, rgba(0,0,0,0.06)); color: var(--text); }
+.col-edge { position: absolute; z-index: 30; width: 18px; min-height: 28px; border-radius: 4px; cursor: col-resize; display: flex; align-items: center; justify-content: center; }
+.col-edge:hover, body.col-widening .col-edge { background: var(--hover); }
+.col-add { width: 18px; height: 22px; border: 0; border-radius: 4px; background: transparent; color: var(--faint); font-size: 15px; line-height: 1; cursor: pointer; padding: 0; }
+.col-add:hover { background: var(--active, rgba(0,0,0,0.08)); color: var(--text); }
+body.col-widening, body.col-widening * { cursor: col-resize !important; user-select: none !important; }
 
 /* ---------- table & database edge bars (drag only) ---------- */
 .tbl-edge { position: relative; border-radius: 4px; background: transparent; transition: background 0.12s; touch-action: none; }

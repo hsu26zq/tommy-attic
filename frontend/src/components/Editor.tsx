@@ -223,8 +223,9 @@ function LiveEditor({ noteId, onChange, onReady, doc, provider }: Props & { doc:
   }, []);
 
   // The / menu: Emoji first, one Heading, "Text" instead of Paragraph, one Columns item.
-  // Lists, quotes and media aren't in it: type "1." / "-" / "[]" for lists, and drag files straight in.
-  const HIDDEN = new Set(["heading_2", "heading_3", "toggle_heading", "toggle_heading_2", "toggle_heading_3", "quote", "numbered_list", "bullet_list", "image", "video", "audio", "file"]);
+  // Lists, quotes, media, callouts and embeds aren't in it: type "1." / "-" / "[]" for lists,
+  // drag files straight in, and paste a link on an empty line for an embed.
+  const HIDDEN = new Set(["heading_2", "heading_3", "toggle_heading", "toggle_heading_2", "toggle_heading_3", "quote", "numbered_list", "bullet_list", "check_list", "toggle_list", "image", "video", "audio", "file"]);
   function slashItems(): DefaultReactSuggestionItem[] {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const base = (getDefaultReactSlashMenuItems(editor) as any[])
@@ -258,15 +259,6 @@ function LiveEditor({ noteId, onChange, onReady, doc, provider }: Props & { doc:
       },
     },
     {
-      title: "Callout",
-      subtext: "A tinted note with an emoji",
-      aliases: ["callout", "note", "tip", "warning", "info", "box"],
-      group: "Basic blocks",
-      icon: <span className="slash-icon">💡</span>,
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      onItemClick: () => insertOrUpdateBlockForSlashMenu(editor, { type: "callout" } as any),
-    },
-    {
       title: "Contents",
       subtext: "A list of this page's headings",
       aliases: ["contents", "toc", "table of contents", "outline"],
@@ -274,15 +266,6 @@ function LiveEditor({ noteId, onChange, onReady, doc, provider }: Props & { doc:
       icon: <span className="slash-icon">☰</span>,
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       onItemClick: () => insertOrUpdateBlockForSlashMenu(editor, { type: "contents" } as any),
-    },
-    {
-      title: "Embed",
-      subtext: "YouTube, Vimeo, Loom, or a link preview",
-      aliases: ["embed", "youtube", "video", "link", "bookmark", "url", "vimeo", "loom"],
-      group: "Media",
-      icon: <span className="slash-icon">⧉</span>,
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      onItemClick: () => insertOrUpdateBlockForSlashMenu(editor, { type: "embed" } as any),
     },
     {
       title: "Database",
@@ -363,7 +346,7 @@ function LiveEditor({ noteId, onChange, onReady, doc, provider }: Props & { doc:
             triggerCharacter="/"
             getItems={async (query) => {
               const found = filterSuggestionItems(slashItems(), query);
-              // Within each group, names that start with what you typed come first ("/emb" → Embed before File)
+              // Within each group, names that start with what you typed come first ("/ta" → Table before Database)
               const q = query.toLowerCase();
               const groups = [...new Set(found.map((i) => i.group))];
               const rank = (i: DefaultReactSuggestionItem) => (q && i.title.toLowerCase().startsWith(q) ? 0 : 1);
