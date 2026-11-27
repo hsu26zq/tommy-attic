@@ -142,10 +142,10 @@ function DatabaseView({ databaseId, editable }: { databaseId: string; editable: 
       setRows((rs) => [...rs, full]);
       return full;
     },
-    deleteRow: (row) => {
+    deleteRow: (row, quiet) => {
       setRows((rs) => rs.filter((r) => r.id !== row.id));
       api(`/notes/${row.id}`, { method: "DELETE" }).catch(() => {});
-      toast("Row deleted", {
+      if (!quiet) toast("Row deleted", {
         label: "Undo",
         run: async () => {
           await api(`/notes/${row.id}/restore`, { method: "POST" }).catch(() => {});

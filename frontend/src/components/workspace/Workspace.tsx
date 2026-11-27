@@ -101,14 +101,14 @@ export default function Workspace({ children }: { children: ReactNode }) {
   );
 }
 
-// The thin bar at the top of each page: sidebar button (when hidden, or on phones), breadcrumbs, actions on the right.
-export function Topbar({ crumbs, children }: { crumbs?: ReactNode; children?: ReactNode }) {
+// The thin bar at the top of each page: sidebar button (when hidden, or on phones), actions on the right.
+export function Topbar({ children }: { children?: ReactNode }) {
   const { openSidebar, hidden, setHidden } = useWorkspace();
   return (
     <div className="topbar">
       <button className="icon-btn menu-btn" onClick={openSidebar} aria-label="Show sidebar"><PanelIcon /></button>
       {hidden && <button className="icon-btn show-side" onClick={() => setHidden(false)} title={"Show sidebar (Ctrl+\\)"}><PanelIcon /></button>}
-      <div className="crumbs">{crumbs}</div>
+      <div className="top-space" />
       <div className="top-actions">{children}</div>
     </div>
   );

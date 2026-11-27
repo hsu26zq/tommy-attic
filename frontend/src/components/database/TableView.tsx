@@ -70,12 +70,81 @@ export default function TableView({ db, rows, editable, saveColumns, addOption, 
     if (row) saveRow(row, { position });
   }
 
+  // Edge bars: drag the bottom edge for rows, the right edge for columns, the corner for either or both.
+  // Dragging back only takes away empty rows and columns.
+  const rowsRef = useRef(rows);
+  rowsRef.current = rows;
+  const colsRef = useRef(db.columns);
+  colsRef.current = db.columns;
+  const pending = useRef(0);
+  const edge = useRef<{ rows: boolean; cols: boolean; x: number; y: number; r0: number; c0: number; rowH: number } | null>(null);
+  const [edging, setEdging] = useState<string | null>(null);
+  const filled = (v: unknown) => v != null && v !== "" && !(Array.isArray(v) && !v.length);
+  const emptyRow = (r: Row) => !r.title && !Object.values(r.properties ?? {}).some(filled);
+  function edgeStart(e: React.PointerEvent, kind: "rows" | "cols" | "both") {
+    e.preventDefault();
+    e.stopPropagation();
+    (e.target as Element).setPointerCapture(e.pointerId);
+    const tr = (e.currentTarget as HTMLElement).closest(".db-grid")?.querySelector("tbody tr");
+    edge.current = { rows: kind !== "cols", cols: kind !== "rows", x: e.clientX, y: e.clientY, r0: rows.length, c0: db.columns.length, rowH: tr?.getBoundingClientRect().height || 34 };
+    setEdging(kind);
+  }
+  function edgeMove(e: React.PointerEvent) {
+    const d = edge.current;
+    if (!d) return;
+    const step = (px: number, size: number) => (px >= 0 ? Math.floor(px / size + 0.3) : Math.ceil(px / size - 0.3));
+    if (d.rows) {
+      const want = Math.min(d.r0 + 50, Math.max(0, d.r0 + step(e.clientY - d.y, d.rowH)));
+      const have = rowsRef.current.length + pending.current;
+      for (let i = have; i < want; i++) {
+        pending.current++;
+        addRow().catch(() => {}).finally(() => pending.current--);
+      }
+      if (want < have && !pending.current) {
+        let n = rowsRef.current.length;
+        for (const r of [...rowsRef.current].sort((a, b) => b.position - a.position)) {
+          if (n <= want || !emptyRow(r)) break;
+          deleteRow(r, true);
+          n--;
+        }
+      }
+    }
+    if (d.cols) {
+      const want = Math.min(d.c0 + 20, Math.max(0, d.c0 + step(e.clientX - d.x, COL_W)));
+      let cols = colsRef.current;
+      if (want > cols.length) {
+        cols = [...cols, ...Array.from({ length: want - cols.length }, () => ({ id: Math.random().toString(36).slice(2, 10), name: "New column", type: "text" as ColumnType }))];
+      } else {
+        while (cols.length > want && !rowsRef.current.some((r) => filled(r.properties?.[cols[cols.length - 1].id]))) cols = cols.slice(0, -1);
+      }
+      if (cols.length !== colsRef.current.length) {
+        colsRef.current = cols;
+        saveColumns(cols);
+      }
+    }
+  }
+  function edgeEnd() {
+    edge.current = null;
+    setEdging(null);
+  }
+  const bar = (kind: "rows" | "cols" | "both", title: string) => (
+    <div
+      className={`db-edge db-edge-${kind} ${edging === kind ? "dragging" : ""}`}
+      title={title}
+      onPointerDown={(e) => edgeStart(e, kind)}
+      onPointerMove={edgeMove}
+      onPointerUp={edgeEnd}
+      onPointerCancel={edgeEnd}
+    />
+  );
+
   const nameW = widthOf("title", NAME_W);
   const total = (editable ? 22 + 40 : 0) + nameW + db.columns.reduce((t, c) => t + widthOf(c.id, COL_W), 0);
 
   return (
     <>
       <div className="db-scroll">
+        <div className="db-grid" style={{ width: total }}>
         <table className="db-table" style={{ width: total }}>
           <colgroup>
             {editable && <col style={{ width: 22 }} />}
@@ -115,11 +184,7 @@ export default function TableView({ db, rows, editable, saveColumns, addOption, 
                   )}
                 </th>
               ))}
-              {editable && (
-                <th className="db-add-col">
-                  <button onClick={() => saveColumns([...db.columns, { id: Math.random().toString(36).slice(2, 10), name: "New column", type: "text" }])} title="Add column">+</button>
-                </th>
-              )}
+              {editable && <th className="db-add-col" />}
             </tr>
           </thead>
           <tbody>
@@ -198,8 +263,11 @@ export default function TableView({ db, rows, editable, saveColumns, addOption, 
             ))}
           </tbody>
         </table>
+        {editable && bar("rows", "Drag to add or remove rows")}
+        {editable && bar("cols", "Drag to add or remove columns")}
+        {editable && bar("both", "Drag to add rows and columns")}
+        </div>
       </div>
-      {editable && <button className="db-new" onClick={() => addRow()}>+ New</button>}
     </>
   );
 }

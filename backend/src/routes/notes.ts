@@ -1,5 +1,6 @@
 import { Hono } from "hono";
 import { HTTPException } from "hono/http-exception";
+import { autoIcon } from "../autoIcon.js";
 import { requireOwner, type AuthVars } from "../auth.js";
 
 const notes = new Hono<{ Variables: AuthVars }>();
@@ -48,17 +49,6 @@ notes.get("/search", async (c) => {
   );
 });
 
-// Everything, for "Export everything": every page and database row with its Markdown
-notes.get("/export", async (c) => {
-  const [{ data: list, error }, { data: dbs, error: dbError }] = await Promise.all([
-    c.var.db.from("notes").select("id,title,icon,parent_id,position,database_id,properties,markdown").is("deleted_at", null).order("position"),
-    c.var.db.from("databases").select("id,note_id,columns"),
-  ]);
-  fail(error);
-  fail(dbError);
-  return c.json({ notes: list ?? [], databases: dbs ?? [] });
-});
-
 // Trash
 notes.get("/trash", async (c) => {
   const { data, error } = await c.var.db
@@ -99,7 +89,6 @@ notes.post("/", async (c) => {
     database_id,
     position: (lastRow?.position ?? 0) + 1,
   };
-  if (typeof body.icon === "string") insert.icon = body.icon.slice(0, 16);
   if (body.properties && typeof body.properties === "object") insert.properties = body.properties;
   if (Array.isArray(body.content)) insert.content = body.content;
   if (typeof body.markdown === "string") insert.markdown = body.markdown;
@@ -109,16 +98,13 @@ notes.post("/", async (c) => {
   return c.json(data, 201);
 });
 
-// One note with its path (breadcrumbs)
+// One note
 notes.get("/:id", async (c) => {
   const id = c.req.param("id");
-  const [{ data, error }, { data: path }] = await Promise.all([
-    c.var.db.from("notes").select("*").eq("id", id).maybeSingle(),
-    c.var.db.rpc("note_ancestors", { target: id }),
-  ]);
+  const { data, error } = await c.var.db.from("notes").select("*").eq("id", id).maybeSingle();
   fail(error);
   if (!data) throw new HTTPException(404, { message: "Note not found" });
-  return c.json({ ...data, path: path ?? [] });
+  return c.json(data);
 });
 
 notes.get("/:id/backlinks", async (c) => {
@@ -133,7 +119,7 @@ notes.patch("/:id", async (c) => {
   const body = await c.req.json();
   const { data: current, error: readError } = await c.var.db
     .from("notes")
-    .select("title,markdown")
+    .select("title,markdown,content")
     .eq("id", id)
     .maybeSingle();
   fail(readError);
@@ -141,7 +127,6 @@ notes.patch("/:id", async (c) => {
 
   const update: Record<string, unknown> = { updated_at: new Date().toISOString() };
   if (typeof body.title === "string") update.title = body.title.slice(0, 300) || "Untitled";
-  if (typeof body.icon === "string" || body.icon === null) update.icon = body.icon;
   if (Array.isArray(body.content)) update.content = body.content;
   if (typeof body.markdown === "string") update.markdown = body.markdown;
   // Sync state, saved with every edit so a note always opens instantly from the database
@@ -158,7 +143,10 @@ notes.patch("/:id", async (c) => {
     update.parent_id = body.parent_id || null;
   }
   if (typeof body.position === "number") update.position = body.position;
-  if (typeof body.cover === "string" || body.cover === null) update.cover = body.cover ? body.cover.slice(0, 500) : null;
+  // the icon follows what the page is about
+  if ("title" in update || "markdown" in update || "content" in update) {
+    update.icon = autoIcon((update.title as string) ?? current.title, (update.markdown as string) ?? current.markdown, update.content ?? current.content);
+  }
   if (typeof body.wide === "boolean") update.wide = body.wide;
   if (typeof body.pinned === "boolean") update.pinned = body.pinned;
 
@@ -197,7 +185,7 @@ notes.patch("/:id", async (c) => {
 notes.post("/:id/duplicate", async (c) => {
   const { data: src, error } = await c.var.db
     .from("notes")
-    .select("title,icon,cover,wide,parent_id,position,content,markdown,ydoc")
+    .select("title,icon,wide,parent_id,position,content,markdown,ydoc")
     .eq("id", c.req.param("id"))
     .maybeSingle();
   fail(error);

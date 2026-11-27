@@ -67,7 +67,7 @@ databases.get("/:id", async (c) => {
     c.var.db.from("databases").select("*").eq("id", id).maybeSingle(),
     c.var.db
       .from("notes")
-      .select("id,title,icon,cover,properties,position,updated_at")
+      .select("id,title,icon,properties,position,updated_at")
       .eq("database_id", id)
       .is("deleted_at", null)
       .order("position"),

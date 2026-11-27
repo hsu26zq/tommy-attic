@@ -5,12 +5,11 @@ import { notesChanged } from "@/lib/notesEvents";
 import { rememberOpened } from "@/lib/recent";
 import { cachedNote, fetchNote, updateCached } from "@/lib/noteCache";
 import { useWorkspace } from "./workspace/Workspace";
-import Cover, { CoverPicker } from "./Cover";
 import { EditorClient } from "./ClientOnly";
 import EditorBoundary from "./EditorBoundary";
 import type { EditorHandle } from "./Editor";
 
-type Pending = Partial<Pick<Note, "title" | "icon" | "cover" | "content" | "markdown" | "properties" | "ydoc">>;
+type Pending = Partial<Pick<Note, "title" | "content" | "markdown" | "properties" | "ydoc">>;
 export type SaveState = "saved" | "saving" | "unsaved" | "error";
 
 export type NoteCtx = {
@@ -19,7 +18,6 @@ export type NoteCtx = {
   handle: React.MutableRefObject<EditorHandle | null>;
 };
 
-const ICONS = ["📄", "📝", "📌", "💡", "📚", "🧠", "⚙️", "🔧", "💻", "🧪", "📊", "🗂️", "✅", "⭐", "🔥", "🎯", "🏠", "✈️", "🎵", "❤️"];
 
 // Loads one note, autosaves changes, and renders icon + title + live editor.
 export default function NoteEditor({
@@ -34,10 +32,11 @@ export default function NoteEditor({
   after?: (ctx: NoteCtx) => ReactNode;
 }) {
   const [note, setNote] = useState<Note | null>(null);
+  // the last icon we know of, to notice when the server picks a new one
+  const iconRef = useRef<string | null | undefined>(undefined);
+  iconRef.current ??= note?.icon;
   const [save, setSave] = useState<SaveState>("saved");
   const [loadError, setLoadError] = useState("");
-  const [picker, setPicker] = useState(false);
-  const [coverPicker, setCoverPicker] = useState(false);
   const { notes } = useWorkspace();
   const pending = useRef<Pending>({});
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -56,7 +55,7 @@ export default function NoteEditor({
       .then((fresh) =>
         setNote((cur) =>
           cur && cur.id === id
-            ? { ...cur, title: fresh.title, icon: fresh.icon, cover: fresh.cover, wide: fresh.wide, properties: fresh.properties, path: fresh.path }
+            ? { ...cur, title: fresh.title, icon: fresh.icon, wide: fresh.wide, properties: fresh.properties }
             : fresh,
         ),
       )
@@ -79,9 +78,17 @@ export default function NoteEditor({
     saving.current = true;
     setSave("saving");
     try {
-      await api(`/notes/${id}`, { method: "PATCH", body: JSON.stringify(changes) });
+      const saved = await api<{ icon: string | null }>(`/notes/${id}`, { method: "PATCH", body: JSON.stringify(changes) });
       setSave(Object.keys(pending.current).length ? "unsaved" : "saved");
-      if ("title" in changes || "icon" in changes) notesChanged();
+      // the server re-picks the icon from the page's words; show it if it changed
+      let iconChanged = false;
+      if (saved && "icon" in saved && saved.icon !== iconRef.current) {
+        iconChanged = true;
+        iconRef.current = saved.icon;
+        setNote((n) => (n ? { ...n, icon: saved.icon } : n));
+        updateCached(id, { icon: saved.icon });
+      }
+      if ("title" in changes || iconChanged) notesChanged();
     } catch {
       pending.current = { ...changes, ...pending.current };
       setSave("error");
@@ -149,32 +156,9 @@ export default function NoteEditor({
     <>
       {header?.(ctx)}
       {save === "error" && <div className="save-error">Couldn&apos;t save. Retrying…</div>}
-      {note.cover && <Cover cover={note.cover} onChange={(cover) => change({ cover })} />}
-      <div className={`page ${wide ? "wide" : ""} ${note.cover ? "has-cover" : ""}`}>
-        <div className="page-icon-row">
-          {note.icon && <button className="page-icon" onClick={() => setPicker(!picker)}>{note.icon}</button>}
-          <div className="page-adds">
-            {!note.icon && <button className="add-icon" onClick={() => setPicker(!picker)}>Add icon</button>}
-            {!note.cover && <button className="add-icon" onClick={() => setCoverPicker(!coverPicker)}>Add cover</button>}
-          </div>
-          {coverPicker && (
-            <CoverPicker
-              onPick={(cover) => {
-                setCoverPicker(false);
-                change({ cover });
-              }}
-              onClose={() => setCoverPicker(false)}
-            />
-          )}
-          {picker && (
-            <div className="icon-picker" onMouseLeave={() => setPicker(false)}>
-              {ICONS.map((i) => (
-                <button key={i} onClick={() => { change({ icon: i }); setPicker(false); }}>{i}</button>
-              ))}
-              {note.icon && <button className="remove" onClick={() => { change({ icon: null }); setPicker(false); }}>Remove</button>}
-            </div>
-          )}
-        </div>
+      <div className={`page ${wide ? "wide" : ""}`}>
+        {/* the icon is picked automatically from what the page is about */}
+        <div className="page-icon-row">{note.icon && <span className="page-icon">{note.icon}</span>}</div>
         <input
           className="page-title"
           value={note.title === "Untitled" ? "" : note.title}

@@ -9,30 +9,30 @@ import { BlockNoteEditor, combineByGroup, filterSuggestionItems, insertOrUpdateB
 import { CollaborationExtension, blocksToYXmlFragment } from "@blocknote/core/yjs";
 import { BlockNoteView } from "@blocknote/mantine";
 import {
-  BlockColorsItem,
-  DragHandleMenu,
-  RemoveBlockItem,
+  FormattingToolbar,
+  FormattingToolbarController,
+  blockTypeSelectItems,
   SideMenu,
   SideMenuController,
   SuggestionMenuController,
-  TableColumnHeaderItem,
-  TableRowHeaderItem,
+  TableHandlesController,
   getDefaultReactSlashMenuItems,
   useBlockNoteEditor,
   useComponentsContext,
   useCreateBlockNote,
+  useExtension,
   useExtensionState,
-  usePortalElement,
   type DefaultReactSuggestionItem,
 } from "@blocknote/react";
-import { SideMenuExtension } from "@blocknote/core/extensions";
-import { copyText, toast } from "@/lib/exportNote";
+import { SideMenuExtension, SuggestionMenu } from "@blocknote/core/extensions";
 import { getMultiColumnSlashMenuItems } from "@blocknote/xl-multi-column";
 import { baseExtensions, editableOptions, editorOptions } from "./editorSetup";
 import { isTrustedHere, supabase } from "@/lib/supabase";
 import { api, type Database, type NoteSummary } from "@/lib/api";
 import { notesChanged } from "@/lib/notesEvents";
 import BlockSelect from "./BlockSelect";
+import ColumnAdder from "./ColumnAdder";
+import TableExtend from "./TableExtend";
 import { dateGuesses } from "./DateMention";
 import { useWorkspace } from "./workspace/Workspace";
 import { useRouter } from "next/navigation";
@@ -70,7 +70,7 @@ const fromBase64 = (b64: string) => Uint8Array.from(atob(b64), (c) => c.charCode
 let converter: BlockNoteEditor | null = null;
 function seed(doc: Y.Doc, blocks: unknown[]) {
   const fragment = doc.getXmlFragment("document-store");
-  if (fragment.length > 0 || !blocks.length) return;
+  if (fragment.length > 0 || !blocks?.length) return;
   try {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     converter ??= BlockNoteEditor.create({ schema: editorOptions.schema }) as any;
@@ -122,71 +122,45 @@ function useSyncedDoc(noteId: string, initialYdoc: string | null, initialContent
   return { doc: setup.doc, provider: loaded ? setup.provider : null };
 }
 
-// "Copy link" in the ⋮⋮ menu: a link that opens this page scrolled to the block
-function CopyBlockLinkItem() {
-  const C = useComponentsContext()!;
-  const editor = useBlockNoteEditor();
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const block = useExtensionState(SideMenuExtension as any, { editor, selector: (s: any) => s?.block }) as { id: string } | undefined;
-  if (!block) return null;
+// One handle per block: a plus made of dots. Click it to add a line below (opens the / menu); press and drag it to move the block.
+function DotPlusIcon() {
+  const dots = [[12, 4.5], [12, 8.25], [12, 12], [12, 15.75], [12, 19.5], [4.5, 12], [8.25, 12], [15.75, 12], [19.5, 12]];
   return (
-    <C.Generic.Menu.Item
-      className="bn-menu-item"
-      onClick={async () => {
-        const ok = await copyText(`${location.origin}${location.pathname}#${block.id}`);
-        toast(ok ? "Link copied" : "Couldn't copy");
-      }}
-    >
-      Copy link
-    </C.Generic.Menu.Item>
+    <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden>
+      {dots.map(([x, y]) => <circle key={`${x}-${y}`} cx={x} cy={y} r="1.7" fill="currentColor" />)}
+    </svg>
   );
 }
 
-// "Turn into" in the ⋮⋮ menu: change a text block's kind without retyping it
-const TURN_INTO: { label: string; type: string; props?: Record<string, unknown> }[] = [
-  { label: "Text", type: "paragraph" },
-  { label: "Heading 1", type: "heading", props: { level: 1 } },
-  { label: "Heading 2", type: "heading", props: { level: 2 } },
-  { label: "Heading 3", type: "heading", props: { level: 3 } },
-  { label: "Bullet list", type: "bulletListItem" },
-  { label: "Numbered list", type: "numberedListItem" },
-  { label: "To-do", type: "checkListItem" },
-  { label: "Toggle", type: "toggleListItem" },
-  { label: "Quote", type: "quote" },
-  { label: "Callout", type: "callout" },
-  { label: "Code", type: "codeBlock" },
-];
-const TEXT_TYPES = new Set(TURN_INTO.map((t) => t.type));
-
-function TurnIntoItem() {
+function DotPlusHandle() {
   const C = useComponentsContext()!;
   const editor = useBlockNoteEditor();
-  const portal = usePortalElement();
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const block = useExtensionState(SideMenuExtension as any, { editor, selector: (s: any) => s?.block }) as { id: string; type: string; props: Record<string, unknown> } | undefined;
-  if (!block || !TEXT_TYPES.has(block.type)) return null;
-  const current = (t: (typeof TURN_INTO)[number]) => t.type === block.type && (!t.props || t.props.level === block.props.level);
+  const side = useExtension(SideMenuExtension as any) as any;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const suggest = useExtension(SuggestionMenu as any) as any;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const block = useExtensionState(SideMenuExtension as any, { editor, selector: (s: any) => s?.block }) as any;
+  if (!block) return null;
+  const add = () => {
+    const empty = Array.isArray(block.content) && block.content.length === 0;
+    const target = empty ? block : editor.insertBlocks([{ type: "paragraph" }], block, "after")[0];
+    editor.setTextCursorPosition(target);
+    suggest.openSuggestionMenu("/");
+  };
   return (
-    <C.Generic.Menu.Root position="right" sub portalElement={portal}>
-      <C.Generic.Menu.Trigger sub>
-        <C.Generic.Menu.Item className="bn-menu-item" subTrigger>
-          Turn into
-        </C.Generic.Menu.Item>
-      </C.Generic.Menu.Trigger>
-      <C.Generic.Menu.Dropdown sub className="bn-menu-dropdown">
-        {TURN_INTO.map((t) => (
-          <C.Generic.Menu.Item
-            key={t.label}
-            className="bn-menu-item"
-            checked={current(t)}
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            onClick={() => editor.updateBlock(block.id, { type: t.type, props: t.props ?? {} } as any)}
-          >
-            {t.label}
-          </C.Generic.Menu.Item>
-        ))}
-      </C.Generic.Menu.Dropdown>
-    </C.Generic.Menu.Root>
+    <C.SideMenu.Button
+      className="bn-button dot-plus"
+      label="Click to add · drag to move"
+      draggable
+      onDragStart={(e: React.DragEvent) => side.blockDragStart(e, block)}
+      onDragEnd={side.blockDragEnd}
+      icon={
+        <span className="dot-plus-hit" onClick={add} data-test="dotPlus">
+          <DotPlusIcon />
+        </span>
+      }
+    />
   );
 }
 
@@ -247,6 +221,22 @@ function LiveEditor({ noteId, onChange, onReady, doc, provider }: Props & { doc:
       window.removeEventListener("pointerdown", keep, true);
     };
   }, []);
+
+  // The / menu: Emoji first, one Heading, "Text" instead of Paragraph, one Columns item.
+  // Lists, quotes and media aren't in it: type "1." / "-" / "[]" for lists, and drag files straight in.
+  const HIDDEN = new Set(["heading_2", "heading_3", "toggle_heading", "toggle_heading_2", "toggle_heading_3", "quote", "numbered_list", "bullet_list", "image", "video", "audio", "file"]);
+  function slashItems(): DefaultReactSuggestionItem[] {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const base = (getDefaultReactSlashMenuItems(editor) as any[])
+      .filter((i) => !HIDDEN.has(i.key) && !/^(heading_|toggle_heading)/.test(i.key))
+      .map((i) => (i.key === "heading" ? { ...i, title: "Heading", badge: undefined } : i.key === "paragraph" ? { ...i, title: "Text", aliases: [...(i.aliases ?? []), "paragraph", "plain"], badge: undefined } : i));
+    // Emoji, Text, Heading lead the menu
+    const lead = ["emoji", "paragraph", "heading"].flatMap((k) => base.filter((i) => i.key === k).map((i) => ({ ...i, group: "Basic blocks" })));
+    const rest = base.filter((i) => !["emoji", "paragraph", "heading"].includes(i.key));
+    const [twoCols] = getMultiColumnSlashMenuItems(editor);
+    const columns = twoCols ? [{ ...twoCols, title: "Columns", aliases: ["columns", "column", "side by side", "split"] }] : [];
+    return combineByGroup([...lead, ...rest] as DefaultReactSuggestionItem[], columns as DefaultReactSuggestionItem[], extraSlashItems);
+  }
 
   const extraSlashItems: DefaultReactSuggestionItem[] = [
     {
@@ -315,15 +305,6 @@ function LiveEditor({ noteId, onChange, onReady, doc, provider }: Props & { doc:
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       onItemClick: () => insertOrUpdateBlockForSlashMenu(editor, { type: "drawing" } as any),
     },
-    {
-      title: "PDF",
-      subtext: "Read a PDF inside the note",
-      aliases: ["pdf", "document", "reader"],
-      group: "Media",
-      icon: <span className="slash-icon">⎙</span>,
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      onItemClick: () => insertOrUpdateBlockForSlashMenu(editor, { type: "pdf" } as any),
-    },
   ];
 
   // "@" links to another note
@@ -368,6 +349,8 @@ function LiveEditor({ noteId, onChange, onReady, doc, provider }: Props & { doc:
           theme="light"
           slashMenu={false}
           sideMenu={false}
+          formattingToolbar={false}
+          tableHandles={false}
           onChange={() =>
             onChange(() => ({
               content: editor.document as unknown[],
@@ -379,10 +362,7 @@ function LiveEditor({ noteId, onChange, onReady, doc, provider }: Props & { doc:
           <SuggestionMenuController
             triggerCharacter="/"
             getItems={async (query) => {
-              const found = filterSuggestionItems(
-                combineByGroup(getDefaultReactSlashMenuItems(editor), getMultiColumnSlashMenuItems(editor), extraSlashItems),
-                query,
-              );
+              const found = filterSuggestionItems(slashItems(), query);
               // Within each group, names that start with what you typed come first ("/emb" → Embed before File)
               const q = query.toLowerCase();
               const groups = [...new Set(found.map((i) => i.group))];
@@ -394,22 +374,23 @@ function LiveEditor({ noteId, onChange, onReady, doc, provider }: Props & { doc:
             }}
           />
           <SuggestionMenuController triggerCharacter="@" getItems={noteLinkItems} />
+          <FormattingToolbarController
+            formattingToolbar={() => (
+              <FormattingToolbar
+                blockTypeSelectItems={blockTypeSelectItems(editor)
+                  .filter((i) => i.type !== "quote")
+                  .map((i) => (i.type === "paragraph" ? { ...i, name: "Text" } : i))}
+              />
+            )}
+          />
           <BlockSelect editor={editor} />
+          <ColumnAdder editor={editor} />
+          <TableHandlesController extendButton={TableExtend} />
           <SideMenuController
             sideMenu={(props) => (
-              <SideMenu
-                {...props}
-                dragHandleMenu={(p) => (
-                  <DragHandleMenu {...p}>
-                    <TurnIntoItem />
-                    <RemoveBlockItem>Delete</RemoveBlockItem>
-                    <BlockColorsItem>Colors</BlockColorsItem>
-                    <CopyBlockLinkItem />
-                    <TableRowHeaderItem>Header row</TableRowHeaderItem>
-                    <TableColumnHeaderItem>Header column</TableColumnHeaderItem>
-                  </DragHandleMenu>
-                )}
-              />
+              <SideMenu {...props}>
+                <DotPlusHandle />
+              </SideMenu>
             )}
           />
         </BlockNoteView>

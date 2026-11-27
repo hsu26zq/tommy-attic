@@ -45,14 +45,12 @@ export type NoteSummary = {
 };
 
 export type Note = NoteSummary & {
-  cover: string | null;
   content: unknown[];
   markdown: string;
   created_at: string;
   database_id: string | null;
   properties: Record<string, unknown>;
   ydoc: string | null;
-  path: { id: string; title: string; icon: string | null }[];
 };
 
 export type ColumnType = "text" | "number" | "tags" | "select" | "status" | "url" | "checkbox" | "date";
@@ -61,7 +59,7 @@ export type ColumnOption = { name: string; color: OptionColor };
 export type Column = { id: string; name: string; type: ColumnType; width?: number; options?: ColumnOption[] };
 export type DbView = { layout?: "table" | "board" | "calendar" | "gallery"; groupBy?: string; dateBy?: string; filters?: { col: string; value: string }[]; sort?: { col: string; dir: 1 | -1 } };
 export type Database = { id: string; note_id: string; columns: Column[]; view: DbView };
-export type Row = { id: string; title: string; icon: string | null; cover?: string | null; properties: Record<string, unknown>; position: number };
+export type Row = { id: string; title: string; icon: string | null; properties: Record<string, unknown>; position: number };
 
 export type Device = {
   id: string;

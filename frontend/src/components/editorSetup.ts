@@ -9,6 +9,7 @@ import { CalloutBlock } from "./CalloutBlock";
 import { EmbedBlock } from "./EmbedBlock";
 import { ContentsBlock } from "./ContentsBlock";
 import { DateMention } from "./DateMention";
+import { PlainQuote } from "./PlainQuote";
 import { PdfBlock } from "./PdfBlock";
 import { DatabaseBlock } from "./database/DatabaseBlock";
 import { NoteLink } from "./NoteLink";
@@ -20,6 +21,7 @@ export const schema = withMultiColumn(
     blockSpecs: {
       ...defaultBlockSpecs,
       codeBlock: createCodeBlockSpec(codeBlockOptions),
+      quote: PlainQuote(),
       callout: CalloutBlock(),
       embed: EmbedBlock(),
       contents: ContentsBlock(),
@@ -34,7 +36,12 @@ export const schema = withMultiColumn(
 export const editorOptions = {
   schema,
   dropCursor: multiColumnDropCursor,
-  dictionary: { ...en, multi_column: columnLocales.en },
+  dictionary: {
+    ...en,
+    multi_column: columnLocales.en,
+    formatting_toolbar: { ...en.formatting_toolbar, table_cell_merge: { tooltip: "Merge cells (Ctrl+M)" } },
+    table_handle: { ...en.table_handle, merge_cells_menuitem: "Merge cells (Ctrl+M)", split_cell_menuitem: "Split cell (Ctrl+Shift+M)" },
+  },
   tables: { splitCells: true, cellBackgroundColor: true, cellTextColor: true, headers: true },
   resolveFileUrl,
 };

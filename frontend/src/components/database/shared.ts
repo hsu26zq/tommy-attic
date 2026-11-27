@@ -19,7 +19,7 @@ export type DbApi = {
   addOption: (colId: string, o: ColumnOption) => void;
   saveRow: (row: Row, patch: { title?: string; properties?: Record<string, unknown>; position?: number }) => void;
   addRow: (properties?: Record<string, unknown>) => Promise<Row>;
-  deleteRow: (row: Row) => void;
+  deleteRow: (row: Row, quiet?: boolean) => void;
   openRow: (id: string) => void;
   setView: (v: DbView) => void;
 };

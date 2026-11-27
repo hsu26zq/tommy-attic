@@ -6,7 +6,6 @@ import { api, type NoteSummary } from "@/lib/api";
 import { notesChanged, openSearch } from "@/lib/notesEvents";
 import { copyText, downloadMarkdown, toast } from "@/lib/exportNote";
 import MoveDialog from "./MoveDialog";
-import { exportEverything } from "@/lib/exportAll";
 import { cancelPrefetch, forgetNote, prefetchNote } from "@/lib/noteCache";
 import { PageGlyph, PanelIcon } from "./icons";
 
@@ -28,7 +27,6 @@ export default function Sidebar({ notes, open, onClose, onHide }: { notes: NoteS
   const [menu, setMenu] = useState<{ id: string; x: number; y: number } | null>(null);
   const [moving, setMoving] = useState<string | null>(null);
   const [renaming, setRenaming] = useState<string | null>(null);
-  const [exporting, setExporting] = useState("");
   const [dragId, setDragId] = useState<string | null>(null);
   const [drop, setDrop] = useState<{ id: string; zone: Zone } | null>(null);
   const press = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -309,23 +307,6 @@ export default function Sidebar({ notes, open, onClose, onHide }: { notes: NoteS
           )}
         </div>
         <div className="side-bottom">
-          <Link href="/edit/import" className={`side-link ${path === "/edit/import" ? "active" : ""}`}>Import</Link>
-          <button
-            className="side-link"
-            disabled={!!exporting}
-            onClick={async () => {
-              try {
-                await exportEverything(setExporting);
-                toast("Export downloaded");
-              } catch {
-                toast("Export failed");
-              } finally {
-                setExporting("");
-              }
-            }}
-          >
-            {exporting || "Export everything"}
-          </button>
           <Link href="/edit/trash" className={`side-link ${path === "/edit/trash" ? "active" : ""}`}>Trash</Link>
         </div>
       </aside>

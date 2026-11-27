@@ -1,6 +1,6 @@
 # Tommy's Attic
 
-My notes: a private Notion-style notebook only I can edit. Any page can be published to the web.
+My notes: a private notebook only I can edit.
 
 ## How it fits together
 
@@ -33,10 +33,11 @@ after 30 minutes idle). Every login sends an alert email.
 ## Features
 
 Nested pages (drag to reorder; right-click for pin, rename, duplicate, wide page, copy link, export, history, move, delete),
-search with recent pages (Ctrl K), trash with undo, version history, `@` page links + backlinks, `@` dates, covers,
-databases (table / board / calendar, filters, select & status columns), callouts, embeds (YouTube, Vimeo, Loom, link cards),
-contents block, drawing (Apple Pencil), PDF reader, code highlighting, box selection and block shortcuts (Ctrl /),
-Notion import, export everything (Markdown + CSV + files), live sync between devices.
+search with recent pages (Ctrl K), trash with undo, version history, `@` page links + backlinks, `@` dates,
+automatic page icons (picked from what the page is about), databases (table / board / gallery / calendar, filters,
+select & status columns, drag the edges to add rows and columns), tables (drag the edges; Ctrl+M merge, Ctrl+Shift+M split),
+columns, callouts, embeds (YouTube, Vimeo, Loom, link cards), contents block, drawing (Apple Pencil), PDF reader,
+code highlighting, box selection and block shortcuts (Ctrl /), live sync between devices.
 
 ## Run it locally
 

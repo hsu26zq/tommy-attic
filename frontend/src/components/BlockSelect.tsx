@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useRef } from "react";
 import { useExtensionState } from "@blocknote/react";
-import { SideMenuExtension } from "@blocknote/core/extensions";
+import { SideMenuExtension, TableHandlesExtension } from "@blocknote/core/extensions";
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type Editor = any;
 
@@ -10,7 +10,8 @@ type Editor = any;
 // - Esc while typing selects the block you're in
 // - then Delete, Ctrl+C / Ctrl+X, Ctrl+D (duplicate), Ctrl+Shift+↑/↓ (move), or click anywhere to let go
 // Also: a plain click below the last block starts a new line there.
-const TOP_BLOCKS = ".bn-editor > .bn-block-group > .bn-block-outer";
+// a columns row counts as one block
+const TOP_BLOCKS = ".bn-editor > .bn-block-group > :is(.bn-block-outer, .bn-block-column-list)";
 const NOT_START = ".bn-block-content, .bn-side-menu, button, input, textarea, select, a, .page-title, .page-icon-row, .cover, .topbar, .backlinks, .popover, .context-menu, .bn-container [role=menu], .mantine-Popover-dropdown, .history";
 
 export default function BlockSelect({ editor }: { editor: Editor }) {
@@ -31,7 +32,7 @@ export default function BlockSelect({ editor }: { editor: Editor }) {
     function paint(ids: string[]) {
       selected.current = ids;
       style.textContent = ids.length
-        ? `${ids.map((id) => `.bn-block-outer[data-id="${CSS.escape(id)}"] > .bn-block`).join(",")} { background: color-mix(in srgb, var(--accent) 11%, transparent); border-radius: 4px; }`
+        ? `${ids.map((id) => `.bn-block-outer[data-id="${CSS.escape(id)}"] > .bn-block, .bn-block-column-list[data-id="${CSS.escape(id)}"]`).join(",")} { background: rgba(255,0,0,0.1); border-radius: 4px; }`
         : "";
       document.body.classList.toggle("blocks-selected", ids.length > 0);
     }
@@ -109,6 +110,19 @@ export default function BlockSelect({ editor }: { editor: Editor }) {
       const mod = e.metaKey || e.ctrlKey;
       const inEditor = !!root()?.contains(document.activeElement);
 
+      // Ctrl+M merges the selected table cells, Ctrl+Shift+M splits one back
+      // (a cell selection can leave focus on the page itself, so only skip when typing in some other field)
+      const typingElsewhere = !inEditor && !!(document.activeElement as HTMLElement | null)?.closest?.("input, textarea, [contenteditable=true]");
+      if (!typingElsewhere && e.ctrlKey && !e.altKey && !e.metaKey && e.key.toLowerCase() === "m") {
+        const tables = editor.getExtension?.(TableHandlesExtension);
+        let done = false;
+        try {
+          done = !!tables && (e.shiftKey ? tables.splitCell() : tables.mergeCells());
+        } catch {}
+        if (done) e.preventDefault();
+        return;
+      }
+
       // Esc while typing: select the block you're in
       if (e.key === "Escape" && inEditor && !selected.current.length) {
         if (document.querySelector(".bn-suggestion-menu, .mantine-Popover-dropdown")) return;
@@ -116,7 +130,7 @@ export default function BlockSelect({ editor }: { editor: Editor }) {
         if (!b) return;
         // only top-level blocks can be box-selected; climb to it
         let el = root()?.querySelector<HTMLElement>(`.bn-block-outer[data-id="${b.id}"]`);
-        while (el && !el.matches(TOP_BLOCKS)) el = el.parentElement?.closest<HTMLElement>(".bn-block-outer") ?? null;
+        while (el && !el.matches(TOP_BLOCKS)) el = el.parentElement?.closest<HTMLElement>(".bn-block-outer, .bn-block-column-list") ?? null;
         if (!el) return;
         e.preventDefault();
         (document.activeElement as HTMLElement | null)?.blur();
@@ -245,6 +259,36 @@ export default function BlockSelect({ editor }: { editor: Editor }) {
       if (editor.prosemirrorView) editor.prosemirrorView.dragging = null;
       document.querySelectorAll(".bn-drag-preview").forEach((p) => p.remove());
     }
+    // While a block is dragged, the blocks below the drop point slide down to open a gap (transform only).
+    // Positions are read without the slide (offsetTop), so the gap never chases the cursor.
+    const slide = document.createElement("style");
+    document.head.appendChild(slide);
+    let slideKey = "";
+    function overSlide(e: DragEvent) {
+      if (!dragged) return;
+      const group = root()?.querySelector<HTMLElement>(":scope > .bn-block-group");
+      const me = group?.querySelector<HTMLElement>(`:scope > [data-id="${CSS.escape(dragged)}"]`);
+      if (!group || !me || !(e.target as HTMLElement)?.closest?.(".main")) return;
+      const g = group.getBoundingClientRect().top;
+      const top = (el: HTMLElement) => g + el.offsetTop - (el.offsetParent === group ? 0 : group.offsetTop);
+      const list = outers().filter((el) => el !== me);
+      const i = list.findIndex((el) => e.clientY < top(el) + el.offsetHeight / 2);
+      const moved = i < 0 ? [] : list.slice(i);
+      const key = moved.map((el) => el.dataset.id).join(",");
+      if (key === slideKey) return;
+      slideKey = key;
+      const h = Math.min(me.offsetHeight, 160);
+      slide.textContent =
+        `.bn-editor > .bn-block-group > [data-id="${CSS.escape(dragged)}"] { opacity: 0.3; }` +
+        (moved.length ? `${moved.map((el) => `.bn-editor > .bn-block-group > [data-id="${CSS.escape(el.dataset.id ?? "")}"]`).join(",")} { transform: translateY(${h}px); }` : "");
+    }
+    const endSlide = () => {
+      slideKey = "";
+      slide.textContent = "";
+    };
+    document.addEventListener("dragover", overSlide, true);
+    document.addEventListener("drop", endSlide, true);
+    document.addEventListener("dragend", endSlide, true);
     document.addEventListener("dragstart", dragStart, true);
     document.addEventListener("drop", dropBelow, true);
     document.addEventListener("dragover", overBelow, true);
@@ -273,6 +317,10 @@ export default function BlockSelect({ editor }: { editor: Editor }) {
       document.removeEventListener("drop", dropBelow, true);
       document.removeEventListener("dragover", overBelow, true);
       document.removeEventListener("dragend", dragDone, true);
+      document.removeEventListener("dragover", overSlide, true);
+      document.removeEventListener("drop", endSlide, true);
+      document.removeEventListener("dragend", endSlide, true);
+      slide.remove();
     };
   }, [editor]);
 

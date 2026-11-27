@@ -32,7 +32,7 @@ export default function Trash() {
 
   return (
     <>
-      <Topbar crumbs={<span className="crumb current">Trash</span>}>
+      <Topbar>
         {!!items?.length && <button className="text-btn danger" onClick={empty}>Empty trash</button>}
       </Topbar>
       <div className="page">

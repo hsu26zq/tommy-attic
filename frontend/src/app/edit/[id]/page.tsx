@@ -60,19 +60,7 @@ export default function NotePage({ params }: { params: Promise<{ id: string }> }
       id={id}
       header={(ctx) => (
         <>
-          <Topbar
-            crumbs={
-              <>
-                {ctx.note.path.map((p) => (
-                  <span key={p.id} className="crumb">
-                    <Link href={`/edit/${p.id}`}>{p.icon ? `${p.icon} ` : ""}{p.title || "Untitled"}</Link>
-                    <span className="crumb-sep">/</span>
-                  </span>
-                ))}
-                <span className="crumb current">{ctx.note.icon ? `${ctx.note.icon} ` : ""}{ctx.note.title || "Untitled"}</span>
-              </>
-            }
-          />
+          <Topbar />
           {showHistory && (
             <HistoryPanel
               noteId={id}
