@@ -100,3 +100,42 @@ export default function TableExtend(props: ExtendButtonProps) {
     </div>
   );
 }
+
+// While a table row or column is dragged by its handle, that row/column follows the mouse.
+// It lets the mouse "see through" it, so the editor still finds the row/column underneath as the drop spot.
+export function TableDragPreview() {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const s = useExtensionState(TableHandlesExtension, { selector: (st: any) => (st?.draggingState ? { ...st.draggingState, blockId: st.block?.id as string } : null) }) as
+    | { draggedCellOrientation: "row" | "col"; originalIndex: number; mousePos: number; blockId: string }
+    | null;
+  const origin = useRef<{ key: string; center: number } | null>(null);
+  const style = useRef<HTMLStyleElement | null>(null);
+  useEffect(() => {
+    const st = document.createElement("style");
+    document.head.appendChild(st);
+    style.current = st;
+    return () => st.remove();
+  }, []);
+  useEffect(() => {
+    const st = style.current;
+    if (!st) return;
+    if (!s) {
+      origin.current = null;
+      st.textContent = "";
+      return;
+    }
+    const scope = `.bn-block-outer[data-id="${CSS.escape(s.blockId)}"] table`;
+    const row = s.draggedCellOrientation === "row";
+    const key = `${s.blockId}:${s.draggedCellOrientation}:${s.originalIndex}`;
+    if (origin.current?.key !== key) {
+      const table = document.querySelector(scope);
+      const el = row ? table?.querySelectorAll("tr")[s.originalIndex] : table?.querySelector("tr")?.children[s.originalIndex];
+      const b = el?.getBoundingClientRect();
+      origin.current = { key, center: b ? (row ? b.top + b.height / 2 : b.left + b.width / 2) : s.mousePos };
+    }
+    const d = Math.round(s.mousePos - origin.current.center);
+    const sel = row ? `${scope} tr:nth-child(${s.originalIndex + 1}) > *` : `${scope} tr > :nth-child(${s.originalIndex + 1})`;
+    st.textContent = `${sel} { transform: ${row ? `translateY(${d}px)` : `translateX(${d}px)`}; pointer-events: none; position: relative; z-index: 5; background: var(--bg); box-shadow: 0 4px 14px rgba(0,0,0,0.12); opacity: 0.92; }`;
+  }, [s]);
+  return null;
+}

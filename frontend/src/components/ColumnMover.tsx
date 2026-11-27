@@ -1,36 +1,38 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 
-// Hover a column → a small handle on its top edge. Drag it left or right to move the whole column.
+// Hover a column → a small handle on its top edge. Drag it left or right to move the whole column:
+// it follows the mouse and the other columns slide aside (positions are read once, so nothing chases the mouse).
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type Ed = any;
 type Box = { rowId: string; index: number; left: number; top: number; width: number };
 
 export default function ColumnMover({ editor }: { editor: Ed }) {
   const [hover, setHover] = useState<Box | null>(null);
-  const [line, setLine] = useState<{ left: number; top: number; height: number } | null>(null);
-  const drag = useRef<{ rowId: string; from: number; to: number } | null>(null);
+  const drag = useRef<{ rowId: string; from: number; to: number; x: number; boxes: { left: number; width: number }[] } | null>(null);
+  const slide = useRef<HTMLStyleElement | null>(null);
 
   useEffect(() => {
     const root = () => editor?.domElement as HTMLElement | undefined;
-    const columnsOf = (rowId: string) =>
-      [...(root()?.querySelectorAll<HTMLElement>(`.bn-block-column-list[data-id="${CSS.escape(rowId)}"] > .bn-block-column`) ?? [])];
 
     let raf = 0;
     function move(e: MouseEvent) {
       const d = drag.current;
       if (d) {
-        // where would the column land: before the column whose middle is right of the mouse
-        const cols = columnsOf(d.rowId);
-        let to = cols.findIndex((c) => {
-          const b = c.getBoundingClientRect();
-          return e.clientX < b.left + b.width / 2;
-        });
-        if (to < 0) to = cols.length;
+        // the dragged column's middle, from where it started
+        const me = d.boxes[d.from];
+        const mid = me.left + me.width / 2 + (e.clientX - d.x);
+        // its new place: count the other columns whose middle it has passed
+        const to = d.boxes.filter((b, i) => i !== d.from && b.left + b.width / 2 < mid).length;
         d.to = to;
-        const row = cols[0]?.parentElement?.getBoundingClientRect();
-        const x = to < cols.length ? cols[to].getBoundingClientRect().left : (cols.at(-1)?.getBoundingClientRect().right ?? 0);
-        if (row) setLine({ left: x + window.scrollX - 1, top: row.top + window.scrollY, height: row.height });
+        const id = CSS.escape(d.rowId);
+        const rules = [`.bn-block-column-list[data-id="${id}"] > .bn-block-column:nth-child(${d.from + 1}) { transform: translateX(${e.clientX - d.x}px); pointer-events: none; z-index: 5; background: var(--bg); box-shadow: 0 6px 20px rgba(0,0,0,0.12); border-radius: 6px; transition: none; }`];
+        d.boxes.forEach((b, i) => {
+          if (i === d.from) return;
+          const shift = d.from < to && i > d.from && i <= to ? -me.width : d.from > to && i >= to && i < d.from ? me.width : 0;
+          rules.push(`.bn-block-column-list[data-id="${id}"] > .bn-block-column:nth-child(${i + 1}) { transform: translateX(${shift}px); transition: transform 0.15s ease; }`);
+        });
+        if (slide.current) slide.current.textContent = rules.join("\n");
         return;
       }
       cancelAnimationFrame(raf);
@@ -47,11 +49,11 @@ export default function ColumnMover({ editor }: { editor: Ed }) {
       const d = drag.current;
       if (!d) return;
       drag.current = null;
-      setLine(null);
+      if (slide.current) slide.current.textContent = "";
       document.body.classList.remove("col-moving");
       const row = editor.getBlock(d.rowId);
       if (!row) return;
-      const to = d.to > d.from ? d.to - 1 : d.to;
+      const to = d.to;
       if (to === d.from) return;
       const kids = [...row.children];
       const [moved] = kids.splice(d.from, 1);
@@ -59,9 +61,13 @@ export default function ColumnMover({ editor }: { editor: Ed }) {
       editor.updateBlock(row, { children: kids });
       setHover(null);
     }
+    const st = document.createElement("style");
+    document.head.appendChild(st);
+    slide.current = st;
     document.addEventListener("mousemove", move);
     window.addEventListener("mouseup", up);
     return () => {
+      st.remove();
       document.removeEventListener("mousemove", move);
       window.removeEventListener("mouseup", up);
       cancelAnimationFrame(raf);
@@ -80,7 +86,11 @@ export default function ColumnMover({ editor }: { editor: Ed }) {
           onMouseDown={(e) => {
             e.preventDefault();
             e.stopPropagation();
-            drag.current = { rowId: hover.rowId, from: hover.index, to: hover.index };
+            const boxes = [...(document.querySelectorAll<HTMLElement>(`.bn-block-column-list[data-id="${CSS.escape(hover.rowId)}"] > .bn-block-column`) ?? [])].map((c) => {
+              const b = c.getBoundingClientRect();
+              return { left: b.left, width: b.width };
+            });
+            drag.current = { rowId: hover.rowId, from: hover.index, to: hover.index, x: e.clientX, boxes };
             document.body.classList.add("col-moving");
           }}
         >
@@ -89,7 +99,6 @@ export default function ColumnMover({ editor }: { editor: Ed }) {
           </svg>
         </button>
       )}
-      {line && <div className="col-move-line" style={line} />}
     </>
   );
 }
