@@ -16,7 +16,7 @@
   --ok: #4d7f5b;
   --shadow: 0 0 0 1px rgba(30, 25, 15, 0.05), 0 6px 20px rgba(30, 25, 15, 0.1);
   --side-w: 248px;
-  --red: rgb(255, 0, 0);
+  --red: rgb(240, 90, 90);
   --radius: 6px;
   --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, "Helvetica Neue", Arial, sans-serif;
   --mono: "SF Mono", ui-monospace, Menlo, Consolas, monospace;
@@ -533,7 +533,7 @@ td:hover .cell-input[type="date"] { color: inherit; }
 .bn-side-menu .mantine-UnstyledButton-root:not(.mantine-Menu-item) svg { width: 20px; height: 20px; }
 
 /* Block selection (box drag / Esc) */
-.select-box { position: fixed; z-index: 90; pointer-events: none; background: rgba(255, 0, 0, 0.07); border: 1px solid rgb(255, 0, 0); border-radius: 3px; }
+.select-box { position: fixed; z-index: 90; pointer-events: none; background: rgba(240, 90, 90, 0.07); border: 1px solid var(--red); border-radius: 3px; }
 .toast { display: flex; align-items: center; gap: 12px; }
 .toast button { border: 0; background: none; color: var(--bg); opacity: 0.75; font: inherit; font-weight: 600; cursor: pointer; padding: 0; }
 .toast button:hover { opacity: 1; }
@@ -579,12 +579,12 @@ button.side-link:disabled { cursor: default; color: var(--faint); }
 [class*="prosemirror-dropcursor"] { background-color: var(--red) !important; }
 .tree-item.drop-before { box-shadow: inset 0 2px 0 var(--red); }
 .tree-item.drop-after { box-shadow: inset 0 -2px 0 var(--red); }
-.tree-item.drop-inside { background: rgba(255, 0, 0, 0.08); }
+.tree-item.drop-inside { background: rgba(240, 90, 90, 0.08); }
 .db-table tr.drop-before td { box-shadow: inset 0 2px 0 var(--red); }
 .db-table tr.drop-after td { box-shadow: inset 0 -2px 0 var(--red); }
-.lane.over, .cal-day.over { background: rgba(255, 0, 0, 0.06); }
-::selection { background: rgba(255, 0, 0, 0.18); }
-.bn-editor ::selection { background: rgba(255, 0, 0, 0.18); }
+.lane.over, .cal-day.over { background: rgba(240, 90, 90, 0.06); }
+::selection { background: rgba(240, 90, 90, 0.16); }
+.bn-editor ::selection { background: rgba(240, 90, 90, 0.16); }
 [data-test="colors"] svg { color: var(--red); }
 
 /* ---------- Dark menus: the / and @ menus, the page right-click menu ---------- */
@@ -668,4 +668,4 @@ button.side-link:disabled { cursor: default; color: var(--faint); }
 .bn-mantine .bn-suggestion-menu-item .bn-mt-suggestion-menu-item-subtitle { color: #a9a59d !important; }
 .bn-mantine .bn-suggestion-menu-item svg { color: #f2efe9 !important; stroke: currentColor; }
 .bn-mantine .bn-suggestion-menu-item .bn-mt-suggestion-menu-item-section[data-position="left"] { background: #2c2b28 !important; color: #f2efe9 !important; }
-.bn-editor .selectedCell:after { background: rgba(255, 0, 0, 0.1) !important; }
+.bn-editor .selectedCell:after { background: rgba(240, 90, 90, 0.1) !important; }

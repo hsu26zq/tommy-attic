@@ -32,7 +32,7 @@ export default function BlockSelect({ editor }: { editor: Editor }) {
     function paint(ids: string[]) {
       selected.current = ids;
       style.textContent = ids.length
-        ? `${ids.map((id) => `.bn-block-outer[data-id="${CSS.escape(id)}"] > .bn-block, .bn-block-column-list[data-id="${CSS.escape(id)}"]`).join(",")} { background: rgba(255,0,0,0.1); border-radius: 4px; }`
+        ? `${ids.map((id) => `.bn-block-outer[data-id="${CSS.escape(id)}"] > .bn-block, .bn-block-column-list[data-id="${CSS.escape(id)}"]`).join(",")} { background: rgba(240,90,90,0.1); border-radius: 4px; }`
         : "";
       document.body.classList.toggle("blocks-selected", ids.length > 0);
     }
