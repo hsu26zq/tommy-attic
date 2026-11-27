@@ -70,12 +70,18 @@ export function autoIcon(title: string, markdown: string, content: unknown): str
   const [best, next] = scores;
   if (best.score >= 3 && best.score >= (next?.score ?? 0) * 1.5) return best.icon;
 
-  // what the page holds
+  // No clear topic: pick by what the page holds. Only a completely empty page gets no icon.
   const types = blockTypes(content);
-  const text = types.filter((x) => !["database", "drawing", "pdf", "embed"].includes(x)).length;
   const has = (x: string) => types.filter((y) => y === x).length;
+  const text = types.filter((x) => !["database", "drawing", "pdf", "embed", "table"].includes(x)).length;
   if (has("database") && has("database") * 3 >= text) return "📊";
   if (has("drawing") && has("drawing") * 3 >= text) return "✏️";
   if (has("pdf") && has("pdf") * 3 >= text) return "📄";
+  if (has("table") && has("table") * 3 >= text) return "📋";
+  if (best.score > 0 && best.score > (next?.score ?? 0)) return best.icon; // a weak topic still beats a generic mark
+  if (has("checkListItem") * 2 >= text && has("checkListItem")) return "✅";
+  if (has("codeBlock") * 2 >= text && has("codeBlock")) return "💻";
+  const hasWords = /[\p{L}\p{N}]/u.test(body) || (t && t !== "untitled");
+  if (hasWords || types.some((x) => ["drawing", "pdf", "embed", "table"].includes(x))) return "📝";
   return null;
 }
