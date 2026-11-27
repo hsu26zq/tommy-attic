@@ -48,12 +48,14 @@ export const editorOptions = {
 
 // hoverMargin: the + ⋮⋮ handles show up when the mouse is anywhere on a block's line,
 // even far to the left or right of the text
-// Pasting a YouTube / Vimeo / Loom link on an empty line turns it into a playable video.
+// Pasting a link on an empty line: video links become a player, other links a link card.
 const VIDEO = /^https?:\/\/(www\.|m\.)?(youtube\.com\/(watch\?|shorts\/)|youtu\.be\/|vimeo\.com\/\d|loom\.com\/share\/)\S*$/i;
+const LINK = /^https?:\/\/[^\s]+$/i;
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function pasteHandler({ event, editor, defaultPasteHandler }: any) {
   const text = event.clipboardData?.getData("text/plain")?.trim() ?? "";
-  if (VIDEO.test(text)) {
+  // a single link pasted on an empty line becomes an embed (video player or link card); inside text it stays a link
+  if (VIDEO.test(text) || LINK.test(text)) {
     const block = editor.getTextCursorPosition().block;
     const empty = block.type === "paragraph" && (!block.content || block.content.length === 0);
     if (empty) {
