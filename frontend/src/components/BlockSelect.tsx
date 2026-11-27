@@ -34,7 +34,7 @@ export default function BlockSelect({ editor }: { editor: Editor }) {
       // Each selected block gets its own rounded box, with a small gap between neighbours.
       // The box is drawn behind the block (a pseudo-element) so nothing on the page moves.
       const sel = (id: string, after = "") =>
-        `.bn-block-outer[data-id="${CSS.escape(id)}"] > .bn-block${after}, .bn-block-column-list[data-id="${CSS.escape(id)}"]${after}`;
+        `.bn-block-outer[data-id="${CSS.escape(id)}"] > .bn-block${after}, .bn-block-column-list[data-id="${CSS.escape(id)}"] > .bn-block-column > .bn-block-outer > .bn-block${after}`; // a columns row: every block in every column gets its own box
       style.textContent = ids.length
         ? `${ids.map((id) => sel(id)).join(",")} { position: relative; isolation: isolate; }
 ${ids.map((id) => sel(id, "::before")).join(",")} { content: ""; position: absolute; inset: 2px -4px; border-radius: 5px; background: rgba(240,90,90,0.12); z-index: -1; pointer-events: none; }`
