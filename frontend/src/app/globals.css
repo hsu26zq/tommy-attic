@@ -588,7 +588,7 @@ button.side-link:disabled { cursor: default; color: var(--faint); }
 [data-test="colors"] svg { color: var(--red); }
 
 /* ---------- Dark menus: the / and @ menus, the page right-click menu ---------- */
-.bn-mantine .bn-suggestion-menu { background: #1d1c1a !important; border: 1px solid #2c2b28 !important; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35) !important; }
+.bn-mantine .bn-suggestion-menu { background: #000000 !important; border: 1px solid #2c2b28 !important; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35) !important; }
 .bn-mantine .bn-suggestion-menu-label { color: #8a8780 !important; }
 .bn-mantine .bn-suggestion-menu-item { color: #ece9e3 !important; background: transparent !important; }
 .bn-mantine .bn-suggestion-menu-item .bn-mt-suggestion-menu-item-section[data-position="left"] { color: #a9a59d !important; }
@@ -598,14 +598,14 @@ button.side-link:disabled { cursor: default; color: var(--faint); }
 .bn-mantine .bn-suggestion-menu .bn-suggestion-menu-item:hover { background: #34322e !important; }
 .bn-mantine .bn-suggestion-menu-loader, .bn-mantine .bn-suggestion-menu-item-empty { color: #8a8780 !important; }
 .bn-mantine .bn-suggestion-menu::-webkit-scrollbar-thumb { background: #3a3834; }
-.context-menu { background: #1d1c1a !important; border: 1px solid #2c2b28; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35) !important; }
+.context-menu { background: #000000 !important; border: 1px solid #2c2b28; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35) !important; }
 .context-menu button { color: #ece9e3 !important; }
 .context-menu button:hover { background: #34322e !important; }
 .context-menu button.danger { color: #ff7a70 !important; }
 .context-menu .menu-sep { background: #34322e; }
 
 /* ---------- Dark code blocks ---------- */
-.bn-block-content[data-content-type="codeBlock"] { background: #1b1b1d !important; color: #e6e6e6; }
+.bn-block-content[data-content-type="codeBlock"] { background: #000000 !important; color: #e6e6e6; }
 .bn-block-content[data-content-type="codeBlock"] > div > select { color: #8d8d92 !important; }
 .bn-block-content[data-content-type="codeBlock"] > div > select:hover { background-color: #2a2a2d !important; color: #e6e6e6 !important; }
 .bn-block-content[data-content-type="codeBlock"] pre, .bn-block-content[data-content-type="codeBlock"] code { color: #e6e6e6; caret-color: #fff; }
