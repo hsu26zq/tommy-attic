@@ -87,7 +87,7 @@ notes.post("/", async (c) => {
     title: typeof body.title === "string" ? body.title.slice(0, 300) : "Untitled",
     parent_id,
     database_id,
-    position: (lastRow?.position ?? 0) + 1,
+    position: typeof body.position === "number" && Number.isFinite(body.position) ? body.position : (lastRow?.position ?? 0) + 1,
   };
   if (body.properties && typeof body.properties === "object") insert.properties = body.properties;
   if (Array.isArray(body.content)) insert.content = body.content;

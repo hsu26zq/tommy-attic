@@ -94,11 +94,18 @@ export default function Sidebar({ notes, open, onClose, onHide }: { notes: NoteS
     });
   }
 
-  async function create(parent_id: string | null) {
-    const note = await api<NoteSummary>("/notes", { method: "POST", body: JSON.stringify({ parent_id }) });
+  async function create(parent_id: string | null, position?: number) {
+    const note = await api<NoteSummary>("/notes", { method: "POST", body: JSON.stringify({ parent_id, position }) });
     if (parent_id) expand(parent_id);
     notesChanged();
     router.push(`/edit/${note.id}`);
+  }
+
+  // "+" on a page makes a new page right below it, at the same level
+  function addBelow(n: NoteSummary) {
+    const sibs = children.get(n.parent_id ?? null) ?? [];
+    const next = sibs[sibs.findIndex((s) => s.id === n.id) + 1];
+    create(n.parent_id ?? null, next ? (n.position + next.position) / 2 : n.position + 1);
   }
 
   const patch = async (id: string, body: Record<string, unknown>) => {
@@ -207,13 +214,15 @@ export default function Sidebar({ notes, open, onClose, onHide }: { notes: NoteS
         onDrop={inTree ? onDrop : undefined}
         {...menuProps(n.id)}
       >
-        {inTree ? (
-          <button className={`chev ${kids ? "" : "empty"} ${isOpen ? "open" : ""}`} onClick={() => kids && toggle(n.id)} aria-label="Expand">
-            ›
-          </button>
-        ) : (
-          <span className="chev empty" />
-        )}
+        {/* the icon; hovering a page that has pages inside swaps it for the arrow that opens them */}
+        <span className={`tree-slot ${inTree && kids ? "has-kids" : ""}`}>
+          <span className="tree-icon">{n.icon || <PageGlyph />}</span>
+          {inTree && kids > 0 && (
+            <button className={`chev ${isOpen ? "open" : ""}`} onClick={() => toggle(n.id)} aria-label={isOpen ? "Hide pages inside" : "Show pages inside"}>
+              ›
+            </button>
+          )}
+        </span>
         {renaming === n.id ? (
           <input
             className="tree-rename"
@@ -233,11 +242,10 @@ export default function Sidebar({ notes, open, onClose, onHide }: { notes: NoteS
           />
         ) : (
           <Link href={`/edit/${n.id}`} className="tree-link" draggable={false} onMouseEnter={() => prefetchNote(n.id)} onMouseLeave={cancelPrefetch}>
-            <span className="tree-icon">{n.icon || <PageGlyph />}</span>
             <span className="tree-title">{n.title || "Untitled"}</span>
           </Link>
         )}
-        {inTree && <button className="tree-add" onClick={() => create(n.id)} title="Add a page inside">+</button>}
+        {inTree && <button className="tree-add" onClick={() => addBelow(n)} title="Add a page below">+</button>}
       </div>
     );
   }
