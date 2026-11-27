@@ -708,3 +708,6 @@ body.tbl-dragging-row .tableWrapper, body.tbl-dragging-col .tableWrapper { overf
 body.tbl-dragging-row .tbl-handle-wrap, body.tbl-dragging-col .tbl-handle-wrap { opacity: 0; }
 /* while a row/column is dragged, each cell draws its own lines so the lines move with it */
 body.tbl-dragging-row [data-content-type="table"] table :is(td, th), body.tbl-dragging-col [data-content-type="table"] table :is(td, th) { border-color: transparent !important; box-shadow: inset 0 0 0 0.5px #ddd; }
+body.tbl-adding-cols, body.tbl-adding-cols * { cursor: col-resize !important; user-select: none !important; }
+/* tables really use the room to the right of the page (a negative margin alone doesn't widen this box) */
+.page .bn-block-content[data-content-type="table"] { flex: none; width: calc(100% - min(0px, calc((100% - (100vw - var(--side-w))) / 2 + 40px))); max-width: none; }

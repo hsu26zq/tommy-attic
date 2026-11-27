@@ -1,7 +1,7 @@
 "use client";
 import { EMPTY_CELL_HEIGHT, EMPTY_CELL_WIDTH } from "@blocknote/core";
 import { TableHandlesExtension } from "@blocknote/core/extensions";
-import { TableHandle, useBlockNoteEditor, useExtension, useExtensionState, type ExtendButtonProps, type TableHandleProps } from "@blocknote/react";
+import { TableCellButton, TableHandle, useBlockNoteEditor, useExtension, useExtensionState, type ExtendButtonProps, type TableCellButtonProps, type TableHandleProps } from "@blocknote/react";
 import { useEffect, useRef, useState, type MouseEvent as RME } from "react";
 
 // Edge bars on a table: drag the bottom bar for rows, the right bar for columns,
@@ -89,6 +89,7 @@ export default function TableExtend(props: ExtendButtonProps) {
 
   if (!editor.isEditable) return null;
   const rows = props.orientation === "addOrRemoveRows";
+  if (!rows && wrap && wrap.scrollWidth > wrap.clientWidth + 1) return null;
   return (
     <div
       style={shift || lead ? (rows ? { width: visibleW, transform: `translateX(${lead}px)` } : { transform: `translateX(${-shift}px)` }) : undefined}
@@ -265,5 +266,114 @@ export function SmoothTableHandle(props: TableHandleProps) {
     >
       <TableHandle {...props} />
     </div>
+  );
+}
+
+// ---- wide tables that scroll sideways ----
+// The handles for a cell that's scrolled out of view would float over empty page; hide them instead.
+function useCellVisible() {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const s = useExtensionState(TableHandlesExtension, { selector: (st: any) => ({ id: st?.block?.id as string | undefined, cell: st?.referencePosCell as DOMRect | undefined }) }) as {
+    id?: string;
+    cell?: DOMRect;
+  };
+  if (!s.id || !s.cell) return true;
+  const wrap = document.querySelector<HTMLElement>(`.bn-block-outer[data-id="${CSS.escape(s.id)}"] .tableWrapper`);
+  if (!wrap) return true;
+  const w = wrap.getBoundingClientRect();
+  return s.cell.right > w.left + 4 && s.cell.left < w.right - 4;
+}
+
+export function VisibleTableHandle(props: TableHandleProps) {
+  const visible = useCellVisible();
+  if (props.orientation === "column" && !visible) return null;
+  return <SmoothTableHandle {...props} />;
+}
+
+export function VisibleCellButton(props: TableCellButtonProps) {
+  const visible = useCellVisible();
+  if (!visible) return null;
+  return <TableCellButton {...props} />;
+}
+
+// A table wider than the page: an "add / remove columns" bar always sits on its visible right edge.
+// Drag it right to add columns (the table scrolls along), left to remove empty ones.
+export function TableOverflowEdge() {
+  const editor = useBlockNoteEditor();
+  const handles = useExtension(TableHandlesExtension);
+  const [at, setAt] = useState<{ id: string; left: number; top: number; height: number } | null>(null);
+  const drag = useRef<{ id: string; x: number; orig: Content } | null>(null);
+
+  useEffect(() => {
+    const root = () => editor.domElement as HTMLElement | undefined;
+    function place(wrap: HTMLElement, id: string) {
+      const w = wrap.getBoundingClientRect();
+      const t = wrap.querySelector("table")?.getBoundingClientRect();
+      const right = w.right - (parseFloat(getComputedStyle(wrap).paddingRight) || 0);
+      setAt({ id, left: right + window.scrollX + 2, top: (t?.top ?? w.top) + window.scrollY, height: t?.height ?? w.height });
+    }
+    function move(e: MouseEvent) {
+      const d = drag.current;
+      if (d) {
+        const b = editor.getBlock(d.id) as Content;
+        if (!b) return;
+        const count = (c: Content) => c.rows[0]?.cells.length ?? 0;
+        const delta = Math.round((e.clientX - d.x) / EMPTY_CELL_WIDTH);
+        const tbl = { type: "table", content: d.orig } as Content;
+        const cropped = { ...d.orig, rows: handles.cropEmptyRowsOrColumns(tbl, "columns") };
+        const want = Math.max(1, count(d.orig) + delta, count(cropped));
+        const next = { ...d.orig, rows: handles.addRowsOrColumns({ type: "table", content: cropped } as Content, "columns", want - count(cropped)) };
+        if (count(next) !== count(b.content)) {
+          editor.updateBlock(b, { type: "table", content: next } as Content);
+          requestAnimationFrame(() => {
+            const wrap = root()?.querySelector<HTMLElement>(`.bn-block-outer[data-id="${CSS.escape(d.id)}"] .tableWrapper`);
+            if (wrap) {
+              wrap.scrollLeft = wrap.scrollWidth;
+              place(wrap, d.id);
+            }
+          });
+        }
+        return;
+      }
+      if ((e.target as HTMLElement | null)?.closest(".tbl-over-edge")) return;
+      const wrap = [...(root()?.querySelectorAll<HTMLElement>(".tableWrapper") ?? [])].find((w) => {
+        if (w.scrollWidth <= w.clientWidth + 1) return false;
+        const r = w.getBoundingClientRect();
+        return e.clientY >= r.top && e.clientY <= r.bottom && e.clientX >= r.left && e.clientX <= r.right + 24;
+      });
+      const id = wrap?.closest<HTMLElement>(".bn-block-outer[data-id]")?.dataset.id;
+      if (!wrap || !id) return setAt(null);
+      place(wrap, id);
+    }
+    function up() {
+      if (!drag.current) return;
+      drag.current = null;
+      document.body.classList.remove("tbl-adding-cols");
+    }
+    const onScroll = () => setAt(null);
+    document.addEventListener("mousemove", move);
+    window.addEventListener("mouseup", up);
+    root()?.addEventListener("scroll", onScroll, true);
+    return () => {
+      document.removeEventListener("mousemove", move);
+      window.removeEventListener("mouseup", up);
+      root()?.removeEventListener("scroll", onScroll, true);
+    };
+  }, [editor, handles]);
+
+  if (!at || !editor.isEditable) return null;
+  return (
+    <div
+      className={`tbl-edge tbl-edge-cols tbl-over-edge ${drag.current ? "dragging" : ""}`}
+      title="Drag to add or remove columns"
+      style={{ position: "absolute", left: at.left, top: at.top, height: at.height, zIndex: 30 }}
+      onMouseDown={(e) => {
+        e.preventDefault();
+        const b = editor.getBlock(at.id) as Content;
+        if (!b) return;
+        drag.current = { id: at.id, x: e.clientX, orig: b.content };
+        document.body.classList.add("tbl-adding-cols");
+      }}
+    />
   );
 }
