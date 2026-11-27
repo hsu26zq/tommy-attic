@@ -673,3 +673,7 @@ button.side-link:disabled { cursor: default; color: var(--faint); }
 .bn-block-column { position: relative; }
 .bn-block-column + .bn-block-column::before { content: ""; position: absolute; left: 0; top: 4px; bottom: 4px; width: 1px; background: var(--line); opacity: 0; transition: opacity 0.15s; pointer-events: none; }
 .bn-block-column-list:hover > .bn-block-column + .bn-block-column::before { opacity: 1; }
+/* room for the block handle between the divider and the text; drop the editor's own always-on column line */
+.bn-block-column:not(:first-child) { padding-left: 40px !important; }
+.bn-block-column:not(:last-child) { box-shadow: none !important; }
+.bn-block-column.bn-column-resize-border { box-shadow: 1px 0 0 var(--faint) !important; }
