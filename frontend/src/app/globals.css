@@ -681,3 +681,8 @@ body.col-widening, body.col-widening * { cursor: col-resize !important; user-sel
 .bn-block-column:not(:last-child) { box-shadow: none !important; }
 .bn-block-column.bn-column-resize-border { box-shadow: 1px 0 0 var(--faint) !important; }
 .bn-block-content[data-content-type="codeBlock"] ::selection, .bn-block-content[data-content-type="codeBlock"] *::selection { background: rgba(240, 90, 90, 0.55) !important; color: #fff; }
+/* / menu: no scrollbar (it still scrolls with the wheel when the screen is short) */
+.bn-mantine .bn-suggestion-menu { scrollbar-width: none; }
+.bn-mantine .bn-suggestion-menu::-webkit-scrollbar { display: none; }
+/* the selection box must not stick out of a column (columns scroll sideways if anything does) */
+.bn-block-column > .bn-block-outer > .bn-block::before { left: 0 !important; right: 0 !important; }
