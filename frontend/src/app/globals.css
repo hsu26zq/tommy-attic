@@ -677,3 +677,4 @@ button.side-link:disabled { cursor: default; color: var(--faint); }
 .bn-block-column:not(:first-child) { padding-left: 40px !important; }
 .bn-block-column:not(:last-child) { box-shadow: none !important; }
 .bn-block-column.bn-column-resize-border { box-shadow: 1px 0 0 var(--faint) !important; }
+.bn-block-content[data-content-type="codeBlock"] ::selection, .bn-block-content[data-content-type="codeBlock"] *::selection { background: rgba(240, 90, 90, 0.55) !important; color: #fff; }
