@@ -669,3 +669,7 @@ button.side-link:disabled { cursor: default; color: var(--faint); }
 .bn-mantine .bn-suggestion-menu-item svg { color: #f2efe9 !important; stroke: currentColor; }
 .bn-mantine .bn-suggestion-menu-item .bn-mt-suggestion-menu-item-section[data-position="left"] { background: #2c2b28 !important; color: #f2efe9 !important; }
 .bn-editor .selectedCell:after { background: rgba(240, 90, 90, 0.1) !important; }
+/* faint divider between columns, only while hovering the row */
+.bn-block-column { position: relative; }
+.bn-block-column + .bn-block-column::before { content: ""; position: absolute; left: 0; top: 4px; bottom: 4px; width: 1px; background: var(--line); opacity: 0; transition: opacity 0.15s; pointer-events: none; }
+.bn-block-column-list:hover > .bn-block-column + .bn-block-column::before { opacity: 1; }
