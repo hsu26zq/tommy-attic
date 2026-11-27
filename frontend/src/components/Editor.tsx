@@ -33,7 +33,7 @@ import { notesChanged } from "@/lib/notesEvents";
 import BlockSelect from "./BlockSelect";
 import ColumnAdder from "./ColumnAdder";
 import ColumnMover from "./ColumnMover";
-import TableExtend, { TableDragPreview } from "./TableExtend";
+import TableExtend, { SmoothTableHandle, TableDragPreview } from "./TableExtend";
 import { dateGuesses } from "./DateMention";
 import { useWorkspace } from "./workspace/Workspace";
 import { useRouter } from "next/navigation";
@@ -399,7 +399,7 @@ function LiveEditor({ noteId, onChange, onReady, doc, provider }: Props & { doc:
           <BlockSelect editor={editor} />
           <ColumnAdder editor={editor} />
           <ColumnMover editor={editor} />
-          <TableHandlesController extendButton={TableExtend} />
+          <TableHandlesController extendButton={TableExtend} tableHandle={SmoothTableHandle} />
           <TableDragPreview />
           <SideMenuController
             sideMenu={(props) => (

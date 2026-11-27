@@ -1,7 +1,7 @@
 "use client";
 import { EMPTY_CELL_HEIGHT, EMPTY_CELL_WIDTH } from "@blocknote/core";
 import { TableHandlesExtension } from "@blocknote/core/extensions";
-import { useBlockNoteEditor, useExtension, useExtensionState, type ExtendButtonProps } from "@blocknote/react";
+import { TableHandle, useBlockNoteEditor, useExtension, useExtensionState, type ExtendButtonProps, type TableHandleProps } from "@blocknote/react";
 import { useEffect, useRef, useState, type MouseEvent as RME } from "react";
 
 // Edge bars on a table: drag the bottom bar for rows, the right bar for columns,
@@ -138,4 +138,132 @@ export function TableDragPreview() {
     st.textContent = `${sel} { transform: ${row ? `translateY(${d}px)` : `translateX(${d}px)`}; pointer-events: none; position: relative; z-index: 5; background: var(--bg); box-shadow: 0 4px 14px rgba(0,0,0,0.12); opacity: 0.92; }`;
   }, [s]);
   return null;
+}
+
+// Table row/column handle with smooth dragging: the dragged row (or column) follows the mouse and the others
+// slide aside. Positions are read once when the drag starts, and the drop spot is worked out from them,
+// so it always lands where the gap is. A plain click still opens the handle's menu.
+export function SmoothTableHandle(props: TableHandleProps) {
+  const editor = useBlockNoteEditor();
+  const handles = useExtension(TableHandlesExtension);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const state = useExtensionState(TableHandlesExtension, { selector: (s: any) => ({ block: s?.block, row: s?.rowIndex as number | undefined, col: s?.colIndex as number | undefined }) }) as {
+    block: Content;
+    row?: number;
+    col?: number;
+  };
+  const stateRef = useRef(state);
+  stateRef.current = state;
+  const suppressClick = useRef(false);
+  const custom = useRef(false); // this press is ours (not the browser's drag)
+
+  function down(e: RME) {
+    custom.current = false;
+    if (e.button !== 0) return;
+    const { block, row, col } = stateRef.current;
+    const isRow = props.orientation === "row";
+    const index = isRow ? row : col;
+    if (!block || index === undefined) return;
+    // merged cells: leave it to the editor's own dragging
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const merged = block.content.rows.some((r: any) => r.cells.some((c: any) => c?.props && ((c.props.colspan ?? 1) > 1 || (c.props.rowspan ?? 1) > 1)));
+    if (merged) return;
+    const table = document.querySelector<HTMLElement>(`.bn-block-outer[data-id="${CSS.escape(block.id)}"] table`);
+    if (!table) return;
+    e.preventDefault(); // no browser drag
+    custom.current = true;
+    const rowsEl = [...table.querySelectorAll("tr")];
+    const boxes = (isRow ? rowsEl : [...(rowsEl[0]?.children ?? [])]).map((el) => {
+      const b = el.getBoundingClientRect();
+      return isRow ? { start: b.top, size: b.height } : { start: b.left, size: b.width };
+    });
+    const st = document.createElement("style");
+    document.head.appendChild(st);
+    const scope = `.bn-block-outer[data-id="${CSS.escape(block.id)}"] table`;
+    const nth = (i: number) => (isRow ? `${scope} tr:nth-child(${i + 1}) > *` : `${scope} tr > :nth-child(${i + 1})`);
+    const startPos = isRow ? e.clientY : e.clientX;
+    let dragging = false;
+    let to = index;
+
+    function move(ev: MouseEvent) {
+      const pos = isRow ? ev.clientY : ev.clientX;
+      const d = pos - startPos;
+      if (!dragging) {
+        if (Math.abs(d) < 4) return;
+        dragging = true;
+        handles.freezeHandles();
+        props.hideOtherElements(true);
+        document.body.classList.add(isRow ? "tbl-dragging-row" : "tbl-dragging-col");
+      }
+      const me = boxes[index!];
+      const mid = me.start + me.size / 2 + d;
+      to = boxes.filter((b, i) => i !== index && b.start + b.size / 2 < mid).length;
+      const axis = isRow ? "translateY" : "translateX";
+      const rules = [`${nth(index!)} { transform: ${axis}(${d}px); position: relative; z-index: 6; background: var(--bg); box-shadow: inset 0 0 0 0.5px #ddd, 0 6px 18px rgba(0,0,0,0.14); transition: none; }`];
+      boxes.forEach((_, i) => {
+        if (i === index) return;
+        const shift = index! < to && i > index! && i <= to ? -me.size : index! > to && i >= to && i < index! ? me.size : 0;
+        rules.push(`${nth(i)} { transform: ${axis}(${shift}px); transition: transform 0.15s ease; }`);
+      });
+      st.textContent = rules.join("\n");
+    }
+    function up() {
+      window.removeEventListener("mousemove", move);
+      window.removeEventListener("mouseup", up);
+      if (!dragging) {
+        st.remove();
+        return;
+      }
+      suppressClick.current = true;
+      setTimeout(() => (suppressClick.current = false), 0);
+      document.body.classList.remove("tbl-dragging-row", "tbl-dragging-col");
+      handles.unfreezeHandles();
+      props.hideOtherElements(false);
+      const b = editor.getBlock(block.id) as Content;
+      if (b && to !== index) {
+        const content = b.content;
+        const moveIn = <T,>(arr: T[]) => {
+          const a = [...arr];
+          const [m] = a.splice(index!, 1);
+          a.splice(to, 0, m);
+          return a;
+        };
+        const next = isRow
+          ? { ...content, rows: moveIn(content.rows) }
+          : {
+              ...content,
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              rows: content.rows.map((r: any) => ({ ...r, cells: moveIn(r.cells) })),
+              columnWidths: content.columnWidths ? moveIn([...content.columnWidths, ...Array(Math.max(0, content.rows[0].cells.length - content.columnWidths.length)).fill(undefined)]) : content.columnWidths,
+            };
+        editor.updateBlock(b, { type: "table", content: next } as Content);
+      }
+      // let the rows settle into their new places before removing the slide
+      requestAnimationFrame(() => st.remove());
+    }
+    window.addEventListener("mousemove", move);
+    window.addEventListener("mouseup", up);
+  }
+
+  return (
+    <div
+      className="tbl-handle-wrap"
+      onMouseDownCapture={down}
+      onDragStartCapture={(e) => {
+        // our own dragging replaces the browser's (except for tables with merged cells)
+        if (custom.current) {
+          e.preventDefault();
+          e.stopPropagation();
+        }
+      }}
+      onClickCapture={(e) => {
+        if (suppressClick.current) {
+          e.stopPropagation();
+          e.preventDefault();
+        }
+      }}
+    >
+      <TableHandle {...props} />
+    </div>
+  );
 }

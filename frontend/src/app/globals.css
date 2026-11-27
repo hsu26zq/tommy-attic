@@ -702,3 +702,9 @@ body.col-widening, body.col-widening * { cursor: col-resize !important; user-sel
 .col-move:hover { color: var(--text); }
 body.col-moving, body.col-moving * { cursor: grabbing !important; user-select: none !important; }
 .col-move-line { position: absolute; z-index: 32; width: 2px; background: var(--red); border-radius: 1px; pointer-events: none; }
+body.tbl-dragging-row, body.tbl-dragging-row * { cursor: grabbing !important; user-select: none !important; }
+body.tbl-dragging-col, body.tbl-dragging-col * { cursor: grabbing !important; user-select: none !important; }
+body.tbl-dragging-row .tableWrapper, body.tbl-dragging-col .tableWrapper { overflow: visible !important; }
+body.tbl-dragging-row .tbl-handle-wrap, body.tbl-dragging-col .tbl-handle-wrap { opacity: 0; }
+/* while a row/column is dragged, each cell draws its own lines so the lines move with it */
+body.tbl-dragging-row [data-content-type="table"] table :is(td, th), body.tbl-dragging-col [data-content-type="table"] table :is(td, th) { border-color: transparent !important; box-shadow: inset 0 0 0 0.5px #ddd; }
