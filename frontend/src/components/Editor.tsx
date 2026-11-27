@@ -124,10 +124,10 @@ function useSyncedDoc(noteId: string, initialYdoc: string | null, initialContent
 
 // One handle per block: a plus made of dots. Click it to add a line below (opens the / menu); press and drag it to move the block.
 function DotPlusIcon() {
-  const dots = [[12, 4.5], [12, 8.25], [12, 12], [12, 15.75], [12, 19.5], [4.5, 12], [8.25, 12], [15.75, 12], [19.5, 12]];
+  const dots = [[12, 5], [5, 12], [12, 12], [19, 12], [12, 19]];
   return (
     <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden>
-      {dots.map(([x, y]) => <circle key={`${x}-${y}`} cx={x} cy={y} r="1.7" fill="currentColor" />)}
+      {dots.map(([x, y]) => <circle key={`${x}-${y}`} cx={x} cy={y} r="2.1" fill="currentColor" />)}
     </svg>
   );
 }
