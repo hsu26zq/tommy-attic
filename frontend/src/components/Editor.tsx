@@ -123,6 +123,31 @@ function useSyncedDoc(noteId: string, initialYdoc: string | null, initialContent
 }
 
 // One handle per block: a plus made of dots. Click it to add a line below (opens the / menu); press and drag it to move the block.
+// small line icons for the / menu (drawn, not emoji, so they take a colour)
+function Ico({ d }: { d: string }) {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <path d={d} />
+    </svg>
+  );
+}
+const ICON_COLORS: Record<string, string> = {
+  Emoji: "#f5c451",
+  Text: "#e8e4dc",
+  Heading: "#f08a5d",
+  "Code Block": "#7cc4ff",
+  Divider: "#a9a59d",
+  Columns: "#b892ff",
+  Page: "#8fd18b",
+  Contents: "#5fd3c6",
+  Table: "#ffb86b",
+  Database: "#ff7eb6",
+  Drawing: "#f05a5a",
+  Date: "#7aa2ff",
+  Today: "#7aa2ff",
+  Tomorrow: "#7aa2ff",
+};
+
 function DotPlusIcon() {
   const dots = [[12, 5], [5, 12], [12, 12], [19, 12], [12, 19]];
   return (
@@ -236,7 +261,11 @@ function LiveEditor({ noteId, onChange, onReady, doc, provider }: Props & { doc:
     const rest = base.filter((i) => !["emoji", "paragraph", "heading"].includes(i.key));
     const [twoCols] = getMultiColumnSlashMenuItems(editor);
     const columns = twoCols ? [{ ...twoCols, title: "Columns", aliases: ["columns", "column", "side by side", "split"] }] : [];
-    return combineByGroup([...lead, ...rest] as DefaultReactSuggestionItem[], columns as DefaultReactSuggestionItem[], extraSlashItems);
+    // every icon gets its own colour
+    return combineByGroup([...lead, ...rest] as DefaultReactSuggestionItem[], columns as DefaultReactSuggestionItem[], extraSlashItems).map((i) => ({
+      ...i,
+      icon: <span className="slash-ico" style={{ color: ICON_COLORS[i.title] ?? "#cfcac2" }}>{i.icon}</span>,
+    }));
   }
 
   const extraSlashItems: DefaultReactSuggestionItem[] = [
@@ -245,7 +274,7 @@ function LiveEditor({ noteId, onChange, onReady, doc, provider }: Props & { doc:
       subtext: "A new page inside this one",
       aliases: ["page", "subpage", "new page", "child"],
       group: "Basic blocks",
-      icon: <span className="slash-icon">▢</span>,
+      icon: <Ico d="M7 3h7l4 4v14H7zM14 3v4h4" />,
       onItemClick: async () => {
         const page = await api<NoteSummary>("/notes", { method: "POST", body: JSON.stringify({ parent_id: noteId }) });
         editor.insertInlineContent([
@@ -263,7 +292,7 @@ function LiveEditor({ noteId, onChange, onReady, doc, provider }: Props & { doc:
       subtext: "A list of this page's headings",
       aliases: ["contents", "toc", "table of contents", "outline"],
       group: "Basic blocks",
-      icon: <span className="slash-icon">☰</span>,
+      icon: <Ico d="M5 7h14M5 12h14M5 17h9" />,
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       onItemClick: () => insertOrUpdateBlockForSlashMenu(editor, { type: "contents" } as any),
     },
@@ -272,7 +301,7 @@ function LiveEditor({ noteId, onChange, onReady, doc, provider }: Props & { doc:
       subtext: "A table where every row is its own page",
       aliases: ["database", "table view", "db", "list"],
       group: "Advanced",
-      icon: <span className="slash-icon">▦</span>,
+      icon: <Ico d="M4 5h16v14H4zM4 10h16M4 15h16M10 5v14" />,
       onItemClick: async () => {
         const db = await api<Database>("/databases", { method: "POST", body: JSON.stringify({ note_id: noteId }) });
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -284,7 +313,7 @@ function LiveEditor({ noteId, onChange, onReady, doc, provider }: Props & { doc:
       subtext: "Draw or handwrite with Apple Pencil, pen or mouse",
       aliases: ["draw", "pencil", "sketch", "handwriting", "ink"],
       group: "Media",
-      icon: <span className="slash-icon">✎</span>,
+      icon: <Ico d="M4 20l4-1 11-11-3-3L5 16zM14 6l3 3" />,
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       onItemClick: () => insertOrUpdateBlockForSlashMenu(editor, { type: "drawing" } as any),
     },
@@ -297,7 +326,7 @@ function LiveEditor({ noteId, onChange, onReady, doc, provider }: Props & { doc:
       title: d.label,
       subtext: d.iso,
       group: "Date",
-      icon: <span className="slash-icon">◷</span>,
+      icon: <Ico d="M4 6h16v14H4zM4 10h16M8 3v4M16 3v4" />,
       onItemClick: () =>
         editor.insertInlineContent([
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
