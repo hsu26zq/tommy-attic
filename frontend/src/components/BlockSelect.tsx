@@ -31,18 +31,14 @@ export default function BlockSelect({ editor }: { editor: Editor }) {
     document.head.appendChild(style);
     function paint(ids: string[]) {
       selected.current = ids;
-      // Neighbouring selected blocks join into one box: only the top of a run and the bottom of a run are rounded.
-      const set = new Set(ids);
-      const order = outers().map((el) => el.dataset.id ?? "");
-      const sel = (id: string) => `.bn-block-outer[data-id="${CSS.escape(id)}"] > .bn-block, .bn-block-column-list[data-id="${CSS.escape(id)}"]`;
-      style.textContent = ids
-        .map((id) => {
-          const i = order.indexOf(id);
-          const top = !set.has(order[i - 1]) ? "4px" : "0";
-          const bottom = !set.has(order[i + 1]) ? "4px" : "0";
-          return `${sel(id)} { background: rgba(240,90,90,0.1); border-radius: ${top} ${top} ${bottom} ${bottom}; }`;
-        })
-        .join("\n");
+      // Each selected block gets its own rounded box, with a small gap between neighbours.
+      // The box is drawn behind the block (a pseudo-element) so nothing on the page moves.
+      const sel = (id: string, after = "") =>
+        `.bn-block-outer[data-id="${CSS.escape(id)}"] > .bn-block${after}, .bn-block-column-list[data-id="${CSS.escape(id)}"]${after}`;
+      style.textContent = ids.length
+        ? `${ids.map((id) => sel(id)).join(",")} { position: relative; isolation: isolate; }
+${ids.map((id) => sel(id, "::before")).join(",")} { content: ""; position: absolute; inset: 2px -4px; border-radius: 5px; background: rgba(240,90,90,0.12); z-index: -1; pointer-events: none; }`
+        : "";
       document.body.classList.toggle("blocks-selected", ids.length > 0);
     }
     const clear = () => selected.current.length && paint([]);
