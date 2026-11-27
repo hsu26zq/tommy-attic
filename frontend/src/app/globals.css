@@ -662,3 +662,9 @@ button.side-link:disabled { cursor: default; color: var(--faint); }
 .tree div:has(> .tree-item.drop-before), .tree div:has(> .tree-item.drop-before) ~ div, .tree div:has(> .tree-item.drop-after) ~ div { transform: translateY(14px); }
 
 .trash-link { width: 32px; height: 28px; padding: 0 !important; display: flex; align-items: center; justify-content: center; color: var(--muted); }
+/* / and @ menu: white text and icons */
+.bn-mantine .bn-suggestion-menu-item, .bn-mantine .bn-suggestion-menu-item *,
+.bn-mantine .bn-suggestion-menu-item .bn-mt-suggestion-menu-item-title { color: #f2efe9 !important; }
+.bn-mantine .bn-suggestion-menu-item .bn-mt-suggestion-menu-item-subtitle { color: #a9a59d !important; }
+.bn-mantine .bn-suggestion-menu-item svg { color: #f2efe9 !important; stroke: currentColor; }
+.bn-mantine .bn-suggestion-menu-item .bn-mt-suggestion-menu-item-section[data-position="left"] { background: #2c2b28 !important; color: #f2efe9 !important; }
