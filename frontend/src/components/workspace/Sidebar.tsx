@@ -291,9 +291,7 @@ export default function Sidebar({ notes, open, onClose, onHide }: { notes: NoteS
             <div className="side-skel" aria-busy="true">
               <div className="skel" /><div className="skel" /><div className="skel" />
             </div>
-          ) : notes.length === 0 ? (
-            <p className="muted small side-pad">No pages yet.</p>
-          ) : (
+          ) : notes.length === 0 ? null : (
             <>
               {pinned.length > 0 && (
                 <>
