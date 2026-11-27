@@ -317,9 +317,6 @@ export default function Sidebar({ notes, open, onClose, onHide }: { notes: NoteS
           <button onClick={act(() => patch(target.id, { pinned: !target.pinned }))}>{target.pinned ? "Unpin" : "Pin"}</button>
           <button onClick={act(() => setRenaming(target.id))}>Rename</button>
           <button onClick={act(() => duplicate(target.id))}>Duplicate</button>
-          <button onClick={act(() => patch(target.id, { wide: !target.wide }))}>
-            Wide page <span className="menu-check">{target.wide ? "✓" : ""}</span>
-          </button>
           <div className="menu-sep" />
           <button onClick={act(async () => toast((await copyText(`${location.origin}/edit/${target.id}`)) ? "Link copied" : "Couldn't copy"))}>Copy link</button>
           <button onClick={act(() => downloadMarkdown(target.id))}>Export as Markdown</button>

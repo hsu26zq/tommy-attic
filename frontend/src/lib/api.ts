@@ -40,7 +40,6 @@ export type NoteSummary = {
   parent_id: string | null;
   position: number;
   pinned: boolean;
-  wide: boolean;
   updated_at: string;
 };
 

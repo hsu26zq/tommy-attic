@@ -6,7 +6,7 @@ import { requireOwner, type AuthVars } from "../auth.js";
 const notes = new Hono<{ Variables: AuthVars }>();
 notes.use("*", requireOwner);
 
-const LIST_FIELDS = "id,title,icon,parent_id,position,pinned,wide,updated_at";
+const LIST_FIELDS = "id,title,icon,parent_id,position,pinned,updated_at";
 const VERSION_EVERY_MS = 10 * 60 * 1000; // keep a history snapshot at most every 10 minutes
 const MAX_VERSIONS = 50;
 
@@ -147,7 +147,6 @@ notes.patch("/:id", async (c) => {
   if ("title" in update || "markdown" in update || "content" in update) {
     update.icon = autoIcon((update.title as string) ?? current.title, (update.markdown as string) ?? current.markdown, update.content ?? current.content);
   }
-  if (typeof body.wide === "boolean") update.wide = body.wide;
   if (typeof body.pinned === "boolean") update.pinned = body.pinned;
 
   const { data, error } = await c.var.db.from("notes").update(update).eq("id", id).select(LIST_FIELDS).single();
@@ -185,7 +184,7 @@ notes.patch("/:id", async (c) => {
 notes.post("/:id/duplicate", async (c) => {
   const { data: src, error } = await c.var.db
     .from("notes")
-    .select("title,icon,wide,parent_id,position,content,markdown,ydoc")
+    .select("title,icon,parent_id,position,content,markdown,ydoc")
     .eq("id", c.req.param("id"))
     .maybeSingle();
   fail(error);

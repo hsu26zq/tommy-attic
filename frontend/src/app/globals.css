@@ -136,13 +136,12 @@ input:focus { border-color: var(--faint); }
 
 /* ---------- page ---------- */
 .page { max-width: 760px; margin: 0 auto; padding: 48px 56px 160px; transition: max-width 0.2s ease; }
-.page.wide { max-width: none; padding-inline: 88px; }
 /* Tables and databases may run past the text column toward the right edge */
 /* only the table / board itself runs wider; the tabs, filter and lines stay in the text column */
-.page:not(.wide) .db-scroll, .page:not(.wide) .board, .page:not(.wide) .bn-block-content[data-content-type="table"] { margin-right: min(0px, calc((100% - (100vw - var(--side-w))) / 2 + 40px)); }
+.page .db-scroll, .page .board, .page .bn-block-content[data-content-type="table"] { margin-right: min(0px, calc((100% - (100vw - var(--side-w))) / 2 + 40px)); }
 .db-scroll { border-top: 0 !important; }
 .db-bar { border-bottom: 1px solid var(--line); padding-bottom: 4px; margin-bottom: 0; }
-.page:not(.wide) .bn-block-content[data-content-type="table"] .tableWrapper { overflow-x: auto; }
+.page .bn-block-content[data-content-type="table"] .tableWrapper { overflow-x: auto; }
 .page-icon-row { position: relative; min-height: 28px; margin-bottom: 4px; display: flex; align-items: flex-end; gap: 4px; flex-wrap: wrap; }
 .page-icon { display: inline-block; font-size: 56px; line-height: 1; padding: 4px; margin-left: -4px; cursor: default; user-select: none; }
 .page-title {
@@ -338,7 +337,6 @@ tr:hover .db-open, tr:hover .db-del { opacity: 1; }
   .bn-formatting-toolbar { max-width: calc(100vw - 32px); overflow-x: auto; flex-wrap: nowrap !important; scrollbar-width: none; }
   .bn-formatting-toolbar::-webkit-scrollbar { display: none; }
   .bn-side-menu { display: none !important; }
-  .page.wide { padding-inline: 20px; }
   .lane { flex-basis: 78vw; }
   .cal-day { min-height: 64px; }
 }

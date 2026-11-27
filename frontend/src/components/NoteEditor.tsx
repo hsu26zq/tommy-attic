@@ -4,7 +4,6 @@ import { api, type Note } from "@/lib/api";
 import { notesChanged } from "@/lib/notesEvents";
 import { rememberOpened } from "@/lib/recent";
 import { cachedNote, fetchNote, updateCached } from "@/lib/noteCache";
-import { useWorkspace } from "./workspace/Workspace";
 import { EditorClient } from "./ClientOnly";
 import EditorBoundary from "./EditorBoundary";
 import type { EditorHandle } from "./Editor";
@@ -37,7 +36,6 @@ export default function NoteEditor({
   iconRef.current ??= note?.icon;
   const [save, setSave] = useState<SaveState>("saved");
   const [loadError, setLoadError] = useState("");
-  const { notes } = useWorkspace();
   const pending = useRef<Pending>({});
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const saving = useRef(false);
@@ -55,7 +53,7 @@ export default function NoteEditor({
       .then((fresh) =>
         setNote((cur) =>
           cur && cur.id === id
-            ? { ...cur, title: fresh.title, icon: fresh.icon, wide: fresh.wide, properties: fresh.properties }
+            ? { ...cur, title: fresh.title, icon: fresh.icon, properties: fresh.properties }
             : fresh,
         ),
       )
@@ -149,14 +147,12 @@ export default function NoteEditor({
     );
 
   const ctx: NoteCtx = { note, change, handle };
-  // "Wide page" is switched from the sidebar menu, so read it from the page list
-  const wide = notes?.find((n) => n.id === note.id)?.wide ?? note.wide;
 
   return (
     <>
       {header?.(ctx)}
       {save === "error" && <div className="save-error">Couldn&apos;t save. Retrying…</div>}
-      <div className={`page ${wide ? "wide" : ""}`}>
+      <div className="page">
         {/* the icon is picked automatically from what the page is about */}
         <div className="page-icon-row">{note.icon && <span className="page-icon">{note.icon}</span>}</div>
         <input
