@@ -686,3 +686,19 @@ body.col-widening, body.col-widening * { cursor: col-resize !important; user-sel
 .bn-mantine .bn-suggestion-menu::-webkit-scrollbar { display: none; }
 /* the selection box must not stick out of a column (columns scroll sideways if anything does) */
 .bn-block-column > .bn-block-outer > .bn-block::before { left: 0 !important; right: 0 !important; }
+/* sidebar: pages inside a page slide open/closed */
+.tree .tree-kids { display: grid; grid-template-rows: 0fr; opacity: 0; transition: grid-template-rows 0.2s ease, opacity 0.2s ease; }
+.tree .tree-kids.open { grid-template-rows: 1fr; opacity: 1; }
+.tree-kids-inner { overflow: hidden; min-height: 0; }
+/* table: resize line, drop line and the clicked handle's outline in the soft red */
+.ProseMirror .column-resize-handle, .bn-table-drop-cursor { background-color: var(--red) !important; }
+.bn-container .bn-table-handle:focus, .bn-container .bn-table-handle:focus-visible, .bn-container [class*="table-handle"]:focus-visible,
+.bn-container .bn-table-cell-handle:focus-visible { outline: 2px solid var(--red) !important; outline-offset: 0; box-shadow: none !important; }
+.bn-mantine .mantine-focus-auto:focus-visible { outline-color: var(--red) !important; }
+/* "+" lights up alone; the strip only when the strip itself is hovered */
+.col-edge:has(.col-add:hover) { background: transparent !important; }
+/* move-a-column handle and its drop line */
+.col-move { position: absolute; z-index: 31; width: 26px; height: 14px; padding: 0; border: 1px solid var(--line); border-radius: 4px; background: var(--surface, #fff); color: var(--faint); cursor: grab; display: flex; align-items: center; justify-content: center; box-shadow: 0 1px 2px rgba(0,0,0,0.06); }
+.col-move:hover { color: var(--text); }
+body.col-moving, body.col-moving * { cursor: grabbing !important; user-select: none !important; }
+.col-move-line { position: absolute; z-index: 32; width: 2px; background: var(--red); border-radius: 1px; pointer-events: none; }

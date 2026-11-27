@@ -68,31 +68,49 @@ export default function ColumnAdder({ editor }: { editor: Ed }) {
       });
     }
 
-    // snap after dragging the line between two columns
+    // The line between two columns steps through halves, thirds and quarters (twelfths for 3+ columns):
+    // while dragging, the columns are shown at the nearest step; letting go saves that step.
+    const snapStyle = document.createElement("style");
+    document.head.appendChild(snapStyle);
+    function snapped(row: { children: Col[] }) {
+      const w = widthsOf(row);
+      const sum = w.reduce((a, b) => a + b, 0);
+      let share = w.map((x) => x / sum);
+      if (share.length === 2) {
+        const steps = [1 / 4, 1 / 3, 1 / 2, 2 / 3, 3 / 4];
+        const first = steps.reduce((best, s) => (Math.abs(s - share[0]) < Math.abs(best - share[0]) ? s : best));
+        share = [first, 1 - first];
+      } else {
+        share = share.map((s) => Math.max(1, Math.round(s * 12)) / 12);
+        const t = share.reduce((a, b) => a + b, 0);
+        share = share.map((s) => s / t);
+      }
+      return { w, next: share.map((s) => s * sum) };
+    }
     let resizing: HTMLElement | null = null;
     function down() {
       resizing = document.querySelector<HTMLElement>(".bn-column-resize-border")?.closest<HTMLElement>(".bn-block-column-list") ?? null;
+    }
+    function resizeMove() {
+      if (!resizing) return;
+      const rowEl = resizing;
+      requestAnimationFrame(() => {
+        const row = editor.getBlock(rowEl.dataset.id ?? "");
+        if (!row) return;
+        const { next } = snapped(row);
+        const id = CSS.escape(rowEl.dataset.id ?? "");
+        snapStyle.textContent = next.map((g, i) => `.bn-block-column-list[data-id="${id}"] > .bn-block-column:nth-child(${i + 1}) { flex-grow: ${g} !important; }`).join("\n");
+      });
     }
     function up() {
       const rowEl = resizing;
       resizing = null;
       if (!rowEl) return;
       setTimeout(() => {
+        snapStyle.textContent = "";
         const row = editor.getBlock(rowEl.dataset.id ?? "");
         if (!row) return;
-        const w = widthsOf(row);
-        const sum = w.reduce((a, b) => a + b, 0);
-        let share = w.map((x) => x / sum);
-        if (share.length === 2) {
-          const steps = [1 / 4, 1 / 3, 1 / 2, 2 / 3, 3 / 4];
-          const first = steps.reduce((best, s) => (Math.abs(s - share[0]) < Math.abs(best - share[0]) ? s : best));
-          share = [first, 1 - first];
-        } else {
-          share = share.map((s) => Math.max(1, Math.round(s * 12)) / 12);
-          const t = share.reduce((a, b) => a + b, 0);
-          share = share.map((s) => s / t);
-        }
-        const next = share.map((s) => s * sum);
+        const { w, next } = snapped(row);
         if (next.every((x, i) => Math.abs(x - w[i]) < 1e-6)) return;
         editor.updateBlock(row, { children: row.children.map((c: Col, i: number) => ({ ...c, props: { ...c.props, width: next[i] } })) });
       }, 0);
@@ -101,7 +119,9 @@ export default function ColumnAdder({ editor }: { editor: Ed }) {
     let drag: { id: string; x: number; start: number; base: number } | null = null;
     function dragMove(e: MouseEvent) {
       if (!drag) return;
-      live.current[drag.id] = Math.max(drag.base, drag.start + e.clientX - drag.x);
+      // the whole row steps in quarter-page widths
+      const raw = Math.max(drag.base, drag.start + e.clientX - drag.x);
+      live.current[drag.id] = drag.base * (1 + Math.round((raw / drag.base - 1) * 4) / 4);
       layout();
       const rowEl = root()?.querySelector<HTMLElement>(`.bn-block-column-list[data-id="${CSS.escape(drag.id)}"]`);
       if (rowEl) {
@@ -118,7 +138,7 @@ export default function ColumnAdder({ editor }: { editor: Ed }) {
       const row = editor.getBlock(id);
       delete live.current[id];
       if (!row || !rowEl || !base) return layout();
-      const f = Math.max(1, rowEl.getBoundingClientRect().width / base);
+      const f = Math.max(1, Math.round((rowEl.getBoundingClientRect().width / base) * 4) / 4);
       const scale = f / factorOf(row);
       if (Math.abs(scale - 1) < 0.01) return layout();
       editor.updateBlock(row, { children: row.children.map((c: Col) => ({ ...c, props: { ...c.props, width: (Number(c.props?.width) || 1) * scale } })) });
@@ -133,12 +153,15 @@ export default function ColumnAdder({ editor }: { editor: Ed }) {
     };
 
     document.addEventListener("mousemove", move);
+    document.addEventListener("mousemove", resizeMove);
     document.addEventListener("mousedown", down, true);
     document.addEventListener("mouseup", up, true);
     window.addEventListener("mousemove", dragMove);
     window.addEventListener("mouseup", dragUp);
     return () => {
       document.removeEventListener("mousemove", move);
+      document.removeEventListener("mousemove", resizeMove);
+      snapStyle.remove();
       document.removeEventListener("mousedown", down, true);
       document.removeEventListener("mouseup", up, true);
       window.removeEventListener("mousemove", dragMove);

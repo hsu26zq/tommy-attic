@@ -32,6 +32,7 @@ import { api, type Database, type NoteSummary } from "@/lib/api";
 import { notesChanged } from "@/lib/notesEvents";
 import BlockSelect from "./BlockSelect";
 import ColumnAdder from "./ColumnAdder";
+import ColumnMover from "./ColumnMover";
 import TableExtend from "./TableExtend";
 import { dateGuesses } from "./DateMention";
 import { useWorkspace } from "./workspace/Workspace";
@@ -397,6 +398,7 @@ function LiveEditor({ noteId, onChange, onReady, doc, provider }: Props & { doc:
           />
           <BlockSelect editor={editor} />
           <ColumnAdder editor={editor} />
+          <ColumnMover editor={editor} />
           <TableHandlesController extendButton={TableExtend} />
           <SideMenuController
             sideMenu={(props) => (

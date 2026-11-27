@@ -12,7 +12,7 @@ type Editor = any;
 // Also: a plain click below the last block starts a new line there.
 // a columns row counts as one block
 const TOP_BLOCKS = ".bn-editor > .bn-block-group > :is(.bn-block-outer, .bn-block-column-list)";
-const NOT_START = ".bn-block-content, .bn-side-menu, .col-edge, .tbl-edge, .db-edge, button, input, textarea, select, a, .page-title, .page-icon-row, .cover, .topbar, .backlinks, .popover, .context-menu, .bn-container [role=menu], .mantine-Popover-dropdown, .history";
+const NOT_START = ".bn-block-content, .bn-side-menu, .col-edge, .col-move, .tbl-edge, .db-edge, button, input, textarea, select, a, .page-title, .page-icon-row, .cover, .topbar, .backlinks, .popover, .context-menu, .bn-container [role=menu], .mantine-Popover-dropdown, .history";
 
 export default function BlockSelect({ editor }: { editor: Editor }) {
   const selected = useRef<string[]>([]);
@@ -56,6 +56,8 @@ ${ids.map((id) => sel(id, "::before")).join(",")} { content: ""; position: absol
       if (e.button !== 0) return;
       const t = e.target as HTMLElement;
       if (!t.closest(".main") || t.closest(NOT_START) || !root()) return;
+      // dragging the line between two columns is a resize, not a selection
+      if (document.querySelector(".bn-column-resize-border")) return;
       // a block with its own controls (drawing, database, PDF, embed) handles its own clicks
       if (t.closest(".bn-block-outer") && t.closest("[contenteditable=false]")) return;
       start = { x: e.clientX, y: e.clientY };
@@ -300,6 +302,51 @@ ${ids.map((id) => sel(id, "::before")).join(",")} { content: ""; position: absol
     const dragDone = () => setTimeout(() => (dragged = null), 0);
     document.addEventListener("dragend", dragDone, true);
 
+    // Double-click a table's column resize line: the column fits its longest line of text
+    function autofit(e: MouseEvent) {
+      if (!document.querySelector(".ProseMirror .column-resize-handle")) return;
+      const cell = (e.target as HTMLElement | null)?.closest<HTMLElement>("td, th");
+      const tableEl = cell?.closest("table");
+      const outer = cell?.closest<HTMLElement>(".bn-block-outer[data-id]");
+      if (!cell || !tableEl || !outer) return;
+      // which column: the line is on the cell's right edge, or on its left edge (then it's the column before)
+      const r = cell.getBoundingClientRect();
+      const colOf = (c: HTMLElement) => [...(c.parentElement?.children ?? [])].slice(0, [...(c.parentElement?.children ?? [])].indexOf(c)).reduce((n, x) => n + ((x as HTMLTableCellElement).colSpan || 1), 0);
+      const col = colOf(cell) + (e.clientX - r.left < r.right - e.clientX ? -1 : (cell as HTMLTableCellElement).colSpan - 1);
+      if (col < 0) return;
+      e.preventDefault();
+      // measure each cell's text on one line: briefly lay the table's text out unwrapped (through a style rule)
+      const probe = document.createElement("style");
+      const scope = `.bn-block-outer[data-id="${CSS.escape(outer.dataset.id ?? "")}"] :is(td, th) :is(.bn-inline-content, p)`;
+      probe.textContent = `${scope} { white-space: nowrap !important; width: max-content !important; display: inline-block !important; }`;
+      let widest = 0;
+      let pad = 0; // everything in a cell around its text (padding, inner spacing)
+      for (const tr of tableEl.querySelectorAll("tr")) {
+        for (const c of tr.children as unknown as HTMLElement[]) {
+          if (colOf(c) !== col || ((c as HTMLTableCellElement).colSpan || 1) > 1) continue;
+          const text = c.querySelector<HTMLElement>(".bn-inline-content, p") ?? c;
+          pad = Math.max(pad, c.getBoundingClientRect().width - text.getBoundingClientRect().width);
+        }
+      }
+      document.head.appendChild(probe);
+      for (const tr of tableEl.querySelectorAll("tr")) {
+        for (const c of tr.children as unknown as HTMLElement[]) {
+          if (colOf(c) !== col || ((c as HTMLTableCellElement).colSpan || 1) > 1) continue;
+          const text = c.querySelector<HTMLElement>(".bn-inline-content, p") ?? c;
+          widest = Math.max(widest, text.getBoundingClientRect().width);
+        }
+      }
+      probe.remove();
+      const block = editor.getBlock(outer.dataset.id);
+      if (!block || block.type !== "table") return;
+      const widths = [...(block.content.columnWidths ?? [])];
+      while (widths.length <= col) widths.push(undefined);
+      widths[col] = Math.max(40, Math.ceil(widest + pad + 4));
+      editor.updateBlock(block, { content: { ...block.content, columnWidths: widths } });
+      window.getSelection()?.removeAllRanges();
+    }
+    document.addEventListener("dblclick", autofit, true);
+
     window.addEventListener("mousedown", down);
     window.addEventListener("mousemove", move);
     window.addEventListener("mouseup", up);
@@ -311,6 +358,7 @@ ${ids.map((id) => sel(id, "::before")).join(",")} { content: ""; position: absol
       box?.remove();
       style.remove();
       document.body.classList.remove("blocks-selected");
+      document.removeEventListener("dblclick", autofit, true);
       window.removeEventListener("mousedown", down);
       window.removeEventListener("mousemove", move);
       window.removeEventListener("mouseup", up);

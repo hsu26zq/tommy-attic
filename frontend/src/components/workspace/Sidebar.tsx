@@ -20,6 +20,28 @@ function loadExpanded(): Set<string> {
   }
 }
 
+// Pages inside a page slide open and closed (they stay drawn only while open or closing)
+function Kids({ open, children }: { open: boolean; children: () => React.ReactNode }) {
+  const [shown, setShown] = useState(open);
+  const [expanded, setExpanded] = useState(open);
+  useEffect(() => {
+    if (open) {
+      setShown(true);
+      const r = requestAnimationFrame(() => requestAnimationFrame(() => setExpanded(true)));
+      return () => cancelAnimationFrame(r);
+    }
+    setExpanded(false);
+    const t = setTimeout(() => setShown(false), 200);
+    return () => clearTimeout(t);
+  }, [open]);
+  if (!shown) return null;
+  return (
+    <div className={`tree-kids ${expanded ? "open" : ""}`}>
+      <div className="tree-kids-inner">{children()}</div>
+    </div>
+  );
+}
+
 export default function Sidebar({ notes, open, onClose, onHide }: { notes: NoteSummary[] | null; open: boolean; onClose: () => void; onHide: () => void }) {
   const router = useRouter();
   const path = usePathname();
@@ -254,7 +276,7 @@ export default function Sidebar({ notes, open, onClose, onHide }: { notes: NoteS
     return (children.get(parent) ?? []).map((n) => (
       <div key={n.id}>
         {row(n, depth, true)}
-        {(children.get(n.id)?.length ?? 0) > 0 && expanded.has(n.id) && tree(n.id, depth + 1)}
+        {(children.get(n.id)?.length ?? 0) > 0 && <Kids open={expanded.has(n.id)}>{() => tree(n.id, depth + 1)}</Kids>}
       </div>
     ));
   }
