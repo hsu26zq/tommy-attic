@@ -711,3 +711,5 @@ body.tbl-dragging-row [data-content-type="table"] table :is(td, th), body.tbl-dr
 body.tbl-adding-cols, body.tbl-adding-cols * { cursor: col-resize !important; user-select: none !important; }
 /* tables really use the room to the right of the page (a negative margin alone doesn't widen this box) */
 .page .bn-block-content[data-content-type="table"] { flex: none; width: calc(100% - min(0px, calc((100% - (100vw - var(--side-w))) / 2 + 40px))); max-width: none; }
+/* menus stand out even over black things like code blocks */
+.bn-mantine .bn-suggestion-menu, .bn-mantine .mantine-Menu-dropdown, .ctx-menu { border: 1px solid rgba(255,255,255,0.16) !important; box-shadow: 0 10px 30px rgba(0,0,0,0.35), 0 0 0 1px rgba(0,0,0,0.4) !important; }
