@@ -10,3 +10,12 @@ export const PlainQuote = createReactBlockSpec(
     toExternalHTML: ({ contentRef }) => <p ref={contentRef} />,
   },
 );
+
+// Checklists are gone too: old ones show as plain text, and typing "[]" no longer makes one.
+export const PlainCheck = createReactBlockSpec(
+  { type: "checkListItem", propSchema: { checked: { default: false } }, content: "inline" },
+  {
+    render: ({ contentRef }) => <p className="plain-quote" ref={contentRef} />,
+    toExternalHTML: ({ contentRef }) => <p ref={contentRef} />,
+  },
+);

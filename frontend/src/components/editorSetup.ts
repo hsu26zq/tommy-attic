@@ -9,7 +9,7 @@ import { CalloutBlock } from "./CalloutBlock";
 import { EmbedBlock } from "./EmbedBlock";
 import { ContentsBlock } from "./ContentsBlock";
 import { DateMention } from "./DateMention";
-import { PlainQuote } from "./PlainQuote";
+import { PlainCheck, PlainQuote } from "./PlainQuote";
 import { PdfBlock } from "./PdfBlock";
 import { DatabaseBlock } from "./database/DatabaseBlock";
 import { NoteLink } from "./NoteLink";
@@ -22,6 +22,7 @@ export const schema = withMultiColumn(
       ...defaultBlockSpecs,
       codeBlock: createCodeBlockSpec(codeBlockOptions),
       quote: PlainQuote(),
+      checkListItem: PlainCheck(),
       callout: CalloutBlock(),
       embed: EmbedBlock(),
       contents: ContentsBlock(),

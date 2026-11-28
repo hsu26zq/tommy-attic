@@ -48,9 +48,14 @@ ${ids.map((id) => sel(id, "::before")).join(",")} { content: ""; position: absol
     const fresh = (b: any): any => ({ type: b.type, props: b.props, content: b.content, children: (b.children ?? []).map(fresh) });
 
     // ---------- box drawing ----------
-    let start: { x: number; y: number } | null = null;
+    // The box is pinned to the page, not the screen, so scrolling while dragging keeps what it already covers.
+    // Dragging near the top or bottom edge scrolls the page.
+    let start: { x: number; y: number } | null = null; // page position where the drag began
     let box: HTMLDivElement | null = null;
     let base: string[] = [];
+    let mouse = { x: 0, y: 0 }; // last mouse position on screen
+    let autoRaf = 0;
+    const scroller = () => document.scrollingElement ?? document.documentElement;
 
     function down(e: MouseEvent) {
       if (e.button !== 0) return;
@@ -60,13 +65,44 @@ ${ids.map((id) => sel(id, "::before")).join(",")} { content: ""; position: absol
       if (document.querySelector(".bn-column-resize-border")) return;
       // a block with its own controls (drawing, database, PDF, embed) handles its own clicks
       if (t.closest(".bn-block-outer") && t.closest("[contenteditable=false]")) return;
-      start = { x: e.clientX, y: e.clientY };
+      start = { x: e.clientX + window.scrollX, y: e.clientY + window.scrollY };
+      mouse = { x: e.clientX, y: e.clientY };
       base = e.shiftKey ? selected.current : [];
+    }
+
+    function draw() {
+      if (!start || !box) return;
+      const cx = mouse.x + window.scrollX, cy = mouse.y + window.scrollY;
+      const l = Math.min(start.x, cx), t = Math.min(start.y, cy);
+      const r = Math.max(start.x, cx), b = Math.max(start.y, cy);
+      // the box element is fixed to the screen, so draw it at screen positions
+      Object.assign(box.style, { left: `${l - window.scrollX}px`, top: `${t - window.scrollY}px`, width: `${r - l}px`, height: `${b - t}px` });
+      // a block counts when the box crosses its height (the box needn't reach the text sideways)
+      const hit = outers()
+        .filter((el) => {
+          const rc = el.getBoundingClientRect();
+          const top = rc.top + window.scrollY, bottom = rc.bottom + window.scrollY;
+          return bottom > t && top < b;
+        })
+        .map((el) => el.dataset.id ?? "");
+      paint([...new Set([...base, ...hit])]);
+    }
+
+    function autoScroll() {
+      autoRaf = 0;
+      if (!start || !box) return;
+      const edge = 48;
+      const v = mouse.y < edge ? -Math.ceil((edge - mouse.y) / 4) : mouse.y > window.innerHeight - edge ? Math.ceil((mouse.y - (window.innerHeight - edge)) / 4) : 0;
+      if (!v) return;
+      scroller().scrollTop += v;
+      draw();
+      autoRaf = requestAnimationFrame(autoScroll);
     }
 
     function move(e: MouseEvent) {
       if (!start) return;
-      const dx = e.clientX - start.x, dy = e.clientY - start.y;
+      mouse = { x: e.clientX, y: e.clientY };
+      const dx = e.clientX + window.scrollX - start.x, dy = e.clientY + window.scrollY - start.y;
       if (!box && Math.hypot(dx, dy) < 5) return;
       e.preventDefault();
       if (!box) {
@@ -76,21 +112,18 @@ ${ids.map((id) => sel(id, "::before")).join(",")} { content: ""; position: absol
         (document.activeElement as HTMLElement | null)?.blur();
         window.getSelection()?.removeAllRanges();
       }
-      const l = Math.min(start.x, e.clientX), t = Math.min(start.y, e.clientY);
-      const r = Math.max(start.x, e.clientX), b = Math.max(start.y, e.clientY);
-      Object.assign(box.style, { left: `${l}px`, top: `${t}px`, width: `${r - l}px`, height: `${b - t}px` });
-      // a block counts when the box crosses its height (the box needn't reach the text sideways)
-      const hit = outers()
-        .filter((el) => {
-          const rc = el.getBoundingClientRect();
-          return rc.bottom > t && rc.top < b;
-        })
-        .map((el) => el.dataset.id ?? "");
-      paint([...new Set([...base, ...hit])]);
+      draw();
+      if (!autoRaf) autoRaf = requestAnimationFrame(autoScroll);
     }
+    const onScroll = () => {
+      if (start && box) draw();
+    };
+    window.addEventListener("scroll", onScroll, { passive: true });
 
     function up(e: MouseEvent) {
       if (!start) return;
+      cancelAnimationFrame(autoRaf);
+      autoRaf = 0;
       const wasBox = !!box;
       box?.remove();
       box = null;
@@ -101,7 +134,7 @@ ${ids.map((id) => sel(id, "::before")).join(",")} { content: ""; position: absol
       clear();
       const list = outers();
       const last = list.at(-1);
-      if (!last || Math.hypot(e.clientX - s.x, e.clientY - s.y) > 5) return;
+      if (!last || Math.hypot(e.clientX + window.scrollX - s.x, e.clientY + window.scrollY - s.y) > 5) return;
       if (e.clientY > last.getBoundingClientRect().bottom) {
         const doc = editor.document;
         const end = doc.at(-1);
@@ -360,6 +393,8 @@ ${ids.map((id) => sel(id, "::before")).join(",")} { content: ""; position: absol
       document.body.classList.remove("blocks-selected");
       document.removeEventListener("dblclick", autofit, true);
       window.removeEventListener("mousedown", down);
+      window.removeEventListener("scroll", onScroll);
+      cancelAnimationFrame(autoRaf);
       window.removeEventListener("mousemove", move);
       window.removeEventListener("mouseup", up);
       window.removeEventListener("keydown", key, true);
