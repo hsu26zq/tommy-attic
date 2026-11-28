@@ -294,14 +294,20 @@ export default function Sidebar({ notes, open, onClose, onHide }: { notes: NoteS
         <div className="side-actions">
           <div className="side-row">
             <button className="side-btn" onClick={openSearch}>
-              <span>Search</span>
+              <span className="side-ico" aria-hidden>
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="11" cy="11" r="7" /><path d="M20 20l-3.5-3.5" /></svg>
+              </span>
+              <span style={{ flex: 1 }}>Search</span>
             </button>
             <button className="icon-btn hide-side" onClick={onHide} title={"Hide sidebar (Ctrl+\\)"}>
               <PanelIcon />
             </button>
           </div>
           <button className="side-btn" onClick={() => create(null)}>
-            <span>New page</span>
+            <span className="side-ico" aria-hidden>
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 20h9" /><path d="M16.5 3.5a2.1 2.1 0 013 3L7 19l-4 1 1-4z" /></svg>
+            </span>
+            <span style={{ flex: 1 }}>New page</span>
           </button>
         </div>
         <div

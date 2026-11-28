@@ -354,12 +354,22 @@ function LiveEditor({ noteId, onChange, onReady, doc, provider }: Props & { doc:
     return [...dates, ...pages];
   }
 
+  // follow the system's light / dark setting
+  const [dark, setDark] = useState(false);
+  useEffect(() => {
+    const mq = window.matchMedia("(prefers-color-scheme: dark)");
+    const on = () => setDark(mq.matches);
+    on();
+    mq.addEventListener("change", on);
+    return () => mq.removeEventListener("change", on);
+  }, []);
+
   return (
     <>
       <div>
         <BlockNoteView
           editor={editor}
-          theme="light"
+          theme={dark ? "dark" : "light"}
           slashMenu={false}
           sideMenu={false}
           formattingToolbar={false}
